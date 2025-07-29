@@ -1,0 +1,124 @@
+import { Home, FileText, Plus, Calendar, Settings, ListChecks } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+
+const menuItems = [
+  {
+	title: "Price Comparison",
+	url: "/price-comparison",
+	icon: FileText,
+  },
+	{
+		title: "Dashboard",
+		url: "/",
+		icon: Home,
+	},
+	{
+		title: "All Invoices",
+		url: "/invoices",
+		icon: FileText,
+	},
+	{
+		title: "Create Invoice",
+		url: "/invoices/create",
+		icon: Plus,
+	},
+	{
+		title: "Delivery Challan",
+		url: "/delivery-challan",
+		icon: FileText,
+	},
+	{
+		title: "Bank Transactions",
+		url: "/bank-transactions",
+		icon: Calendar,
+	},
+	{
+		title: "Letter",
+		url: "/letter",
+		icon: FileText,
+	},
+	{
+		title: "Settings",
+		url: "/settings",
+		icon: Settings,
+	},
+	{
+		title: "Taxes", 
+		url: "/tax", 
+		icon: Calendar,
+	},
+  {
+	title: "Purchases", 
+	url: "/purchases", 
+	icon: FileText,
+  },
+  {
+	title: "Vendors Invoices",
+	url: "/vendors-invoices",
+	icon: FileText,
+  },
+  // Removed extra blank sidebar entries as per user request
+];
+
+
+export function AppSidebar() {
+	const location = useLocation();
+
+	return (
+		<Sidebar className="border-r border-gray-200">
+			<SidebarHeader className="border-b border-gray-200 p-4">
+				<div className="flex items-center gap-3">
+					<img
+						src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png"
+						alt="Veshad and Company Logo"
+						className="h-12 w-auto"
+					/>
+					<div>
+						<h2 className="text-lg font-bold text-blue-900">
+							VESHAD AND COMPANY
+						</h2>
+						<p className="text-sm text-gray-600">Invoice Management</p>
+					</div>
+				</div>
+				<SidebarTrigger className="ml-auto" />
+			</SidebarHeader>
+			<SidebarContent>
+				<SidebarGroup>
+					<SidebarGroupLabel className="text-gray-700 font-medium">
+						Navigation
+					</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							{menuItems.map((item) => (
+								<SidebarMenuItem key={item.title}>
+									<SidebarMenuButton
+										asChild
+										isActive={location.pathname === item.url}
+										className="data-[active=true]:bg-blue-100 data-[active=true]:text-blue-900 hover:bg-blue-50"
+									>
+										<Link to={item.url} className="flex items-center gap-3">
+											<item.icon className="h-4 w-4" />
+											<span>{item.title}</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							))}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+			</SidebarContent>
+		</Sidebar>
+	);
+}
