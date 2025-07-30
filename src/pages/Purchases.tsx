@@ -100,7 +100,7 @@ export default function Purchases() {
     { key: 'bankPaymentRef', label: 'Bank Payment Ref', minWidth: 150, maxWidth: 220, align: 'center' },
     { key: 'clientName', label: 'Client Name', minWidth: 150, maxWidth: 220, align: 'center' },
     { key: 'paymentRemarks', label: 'Payment Remarks', minWidth: 150, maxWidth: 220, align: 'center' },
-    { key: 'refBankName', label: 'Bank Name', minWidth: 150, maxWidth: 220, align: 'center' },
+    { key: 'refBankName', label: 'Ref Bank Name', minWidth: 150, maxWidth: 220, align: 'center' },
     { key: 'invoiceNo', label: 'Invoice No', minWidth: 150, maxWidth: 220, align: 'center' },
     { key: 'inputCgst', label: 'Input CGST', minWidth: 100, maxWidth: 150, align: 'center' },
     { key: 'inputSgst', label: 'Input SGST', minWidth: 100, maxWidth: 150, align: 'center' },
