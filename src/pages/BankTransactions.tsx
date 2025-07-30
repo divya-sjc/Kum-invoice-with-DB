@@ -45,7 +45,7 @@ export default function BankTransactions() {
 
   const fetchTransactions = useCallback(async () => {
     try {
-      const response = await fetch('/api/transactions');
+      const response = await fetch('/api/bank-transactions');
       if (!response.ok) {
         throw new Error('Failed to fetch transactions');
       }
@@ -91,7 +91,7 @@ export default function BankTransactions() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/transactions/import', {
+      const response = await fetch('/api/bank-transactions/import', {
         method: 'POST',
         body: formData,
       });
