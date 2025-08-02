@@ -256,21 +256,6 @@ db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
     date TEXT,
     body TEXT
   )`);
-
-//Bank Transaction table
-  db.run(`CREATE TABLE IF NOT EXISTS bank_transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    description TEXT,
-    amount REAL,
-    type TEXT,
-    status TEXT,
-    reference_number TEXT,
-    vendor TEXT,
-    payment_method TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
 });
 
 // Configure multer for file uploads
@@ -1347,67 +1332,6 @@ app.post("/api/purchases/import", purchaseUpload.single("file"), async (req, res
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// GET all bank transactions
-app.get("/api/bank-transactions", (req, res) => {
-  db.all("SELECT * FROM bank_transactions ORDER BY date DESC, id DESC", [], (err, rows) => {
-    if (err) {
-      console.error("Error fetching bank transactions:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
-// Import (group POST) bank transactions from array
-app.post("/api/bank-transactions/import", (req, res) => {
-  const transactions = req.body.transactions;
-  if (!Array.isArray(transactions)) {
-    return res.status(400).json({ error: "Payload must be an array of transactions" });
-  }
-  let errors = [];
-  let completed = 0;
-  if (transactions.length === 0) return res.json({ success: true, errors: [] });
-
-  transactions.forEach((data, idx) => {
-    // Validate required fields
-    const errList = [];
-    if (!data.date) errList.push("Missing date");
-    if (!data.amount) errList.push("Missing amount");
-    if (errList.length) {
-      errors.push({ idx, errors: errList });
-      completed++;
-      if (completed === transactions.length) {
-        return res.json({ success: errors.length === 0, errors });
-      }
-      return;
-    }
-    db.run(
-      `INSERT INTO bank_transactions (
-        date, description, amount, type, status, reference_number, vendor, payment_method
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.date,
-        data.description || '',
-        data.amount,
-        data.type || '',
-        data.status || '',
-        data.reference_number || '',
-        data.vendor || '',
-        data.payment_method || ''
-      ],
-      function (err) {
-        if (err) {
-          errors.push({ idx, error: err.message });
-        }
-        completed++;
-        if (completed === transactions.length) {
-          return res.json({ success: errors.length === 0, errors });
-        }
-      }
-    );
-  });
 });
 
 app.listen(PORT, () => {
