@@ -1342,6 +1342,98 @@ app.post("/api/purchases/import", purchaseUpload.single("file"), async (req, res
   }
 });
 
+// --- Vendors Invoices API ---
+
+// Get all vendor invoices
+app.get("/api/vendors-invoices", (req, res) => {
+  db.all("SELECT * FROM vendors_invoices ORDER BY id DESC", [], (err, rows) => {
+    if (err) {
+      console.error("Error fetching vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+    }
+    res.json(rows);
+  });
+});
+
+// Add a new vendor invoice
+app.post("/api/vendors-invoices", (req, res) => {
+  const {
+    vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus,
+    veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst
+  } = req.body;
+  db.run(
+    `INSERT INTO vendors_invoices (vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst],
+    function (err) {
+      if (err) {
+        console.error("Error adding vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to add vendor invoice" });
+      }
+      res.json({ id: this.lastID });
+    }
+  );
+});
+
+// Update a vendor invoice
+app.put("/api/vendors-invoices/:id", (req, res) => {
+  const { id } = req.params;
+  const {
+    vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus,
+    veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst
+  } = req.body;
+  db.run(
+    `UPDATE vendors_invoices SET vendorName=?, itemName=?, totalInvoiceValue=?, cgst=?, sgst=?, igst=?, paymentStatus=?, veshadInvoiceRefNo=?, veshadInvoiceValue=?, veshadSgst=?, veshadCgst=?, veshadIgst=? WHERE id=?`,
+    [vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst, id],
+    function (err) {
+      if (err) {
+        console.error("Error updating vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to update vendor invoice" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Delete one or more vendor invoices
+app.delete("/api/vendors-invoices", (req, res) => {
+  const { ids } = req.body; // expects { ids: [1,2,3] }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "No IDs provided for deletion" });
+  }
+  const placeholders = ids.map(() => '?').join(',');
+  db.run(`DELETE FROM vendors_invoices WHERE id IN (${placeholders})`, ids, function (err) {
+    if (err) {
+      console.error("Error deleting vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to delete vendor invoices" });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// Import vendor invoices from CSV (expects array of objects)
+app.post("/api/vendors-invoices/import", (req, res) => {
+  const { data } = req.body; // expects { data: [ {...}, {...} ] }
+  if (!Array.isArray(data) || data.length === 0) {
+    return res.status(400).json({ error: "No data provided for import" });
+  }
+  const stmt = db.prepare(`INSERT INTO vendors_invoices (vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const row of data) {
+    stmt.run([
+      row.vendorName, row.itemName, row.totalInvoiceValue, row.cgst, row.sgst, row.igst, row.paymentStatus,
+      row.veshadInvoiceRefNo, row.veshadInvoiceValue, row.veshadSgst, row.veshadCgst, row.veshadIgst
+    ]);
+  }
+  stmt.finalize((err) => {
+    if (err) {
+      console.error("Error importing vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to import vendor invoices" });
+    }
+    res.json({ success: true });
+  });
+});
+// --- End Vendors Invoices API ---
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
