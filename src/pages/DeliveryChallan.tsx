@@ -76,7 +76,7 @@ async function saveDC(dc) {
     }
     const method = dc.isEditing ? "PUT" : "POST";
     const url = dc.isEditing
-      ? `http://localhost:4000/api/delivery-challans/${dc.challanNo}`
+      ? `http://localhost:4000/api/delivery-challans/${encodeURIComponent(dc.challanNo)}`
       : "http://localhost:4000/api/delivery-challans";
     
     const response = await fetch(url, {
@@ -89,8 +89,15 @@ async function saveDC(dc) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to save delivery challan');
+      let errorText = await response.text();
+      let errorMsg = errorText;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.error || errorText;
+      } catch (e) {
+        // Not JSON, keep errorText
+      }
+      throw new Error(errorMsg || 'Failed to save delivery challan');
     }
 
     return await response.json();
@@ -196,7 +203,7 @@ export default function DeliveryChallan() {
       bill_to_address: inv.deliveryAddress_address || "",
       order_date: inv.date || "",
       dispatch_date: inv.dispatch_date || "",
-      eway_bill_no: inv.eway_bill_no || "",
+      eway_bill_no: inv.ewayBillRef || "",
       items: (inv.items || []).map(i => ({
       id: i.id || 0,
       item_description: i.item_description || "",
@@ -395,12 +402,13 @@ export default function DeliveryChallan() {
           onChange={handleSelectInvoice}
           onClick={handleFetchInvoices}
           style={{ width: 220, fontSize: 16 }}
+          disabled={challan.isEditing}
         >
           <option value="">Select Invoice</option>
           {invoiceOptions.map(inv => (
-        <option key={inv.invoiceNumber} value={inv.invoiceNumber}>
-          {inv.invoiceNumber || 'No Number'}
-        </option>
+            <option key={inv.invoiceNumber} value={inv.invoiceNumber}>
+              {inv.invoiceNumber || 'No Number'}
+            </option>
           ))}
         </select>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -425,6 +433,7 @@ export default function DeliveryChallan() {
               value={challan.order_date || ""}
               onChange={handleChange}
               style={{ width: 150, fontSize: 16 }}
+              disabled={challan.isEditing}
             />
           </label>
         </div>
@@ -438,11 +447,14 @@ export default function DeliveryChallan() {
               value={challan.bill_to_address || ""}
               onChange={handleChange}
               style={{ width: 150, fontSize: 16 }}
+              disabled={challan.isEditing}
             />
           </label>
         </div>
         <div>
-          <label>E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} /></label>
+          <label>
+            E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} disabled={challan.isEditing} />
+          </label>
         </div>
         </div>
       </div>
