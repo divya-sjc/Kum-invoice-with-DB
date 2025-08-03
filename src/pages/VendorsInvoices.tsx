@@ -227,12 +227,6 @@ export default function VendorsInvoices() {
               <TableCell className="border border-black text-right">{row.cgst}</TableCell>
               <TableCell className="border border-black text-right">{row.sgst}</TableCell>
               <TableCell className="border border-black text-right">{row.igst}</TableCell>
-              <TableCell className="border border-black">{row.paymentStatus}</TableCell>
-              <TableCell className="border border-black">{row.veshadInvoiceRefNo}</TableCell>
-              <TableCell className="border border-black text-right">{row.veshadInvoiceValue}</TableCell>
-              <TableCell className="border border-black text-right">{row.veshadSgst}</TableCell>
-              <TableCell className="border border-black text-right">{row.veshadCgst}</TableCell>
-              <TableCell className="border border-black text-right">{row.veshadIgst}</TableCell>
               <TableCell className="border border-black text-center">
                 <button
                   onClick={async () => {
@@ -244,18 +238,29 @@ export default function VendorsInvoices() {
                     });
                     if (res.ok) fetchData();
                   }}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 focus:outline-none ${row.paymentStatus === "Paid" ? "bg-green-500" : "bg-red-500"}`}
+                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 focus:outline-none ${
+                    row.paymentStatus === "Paid" ? "bg-green-500" : "bg-red-500"
+                  }`}
                   aria-pressed={row.paymentStatus === "Paid"}
                   style={{ marginRight: 8, border: 'none' }}
                   title={row.paymentStatus === "Paid" ? "Mark as Unpaid" : "Mark as Paid"}
                 >
                   <span
-                    className={`absolute left-0 top-0 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${row.paymentStatus === "Paid" ? "translate-x-6" : "translate-x-0"}`}
+                    className={`absolute left-0 top-0 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${
+                      row.paymentStatus === "Paid" ? "translate-x-6" : "translate-x-0"
+                    }`}
                     style={{ border: '1px solid #ccc' }}
                   />
-                  <span className="sr-only">{row.paymentStatus === "Paid" ? "Paid" : "Unpaid"}</span>
+                  <span className="sr-only">
+                    {row.paymentStatus === "Paid" ? "Paid" : "Pending"}
+                  </span>
                 </button>
               </TableCell>
+              <TableCell className="border border-black">{row.veshadInvoiceRefNo}</TableCell>
+              <TableCell className="border border-black text-right">{row.veshadInvoiceValue}</TableCell>
+              <TableCell className="border border-black text-right">{row.veshadSgst}</TableCell>
+              <TableCell className="border border-black text-right">{row.veshadCgst}</TableCell>
+              <TableCell className="border border-black text-right">{row.veshadIgst}</TableCell>
               <TableCell className="border border-black text-center">
                 <Button size="sm" variant="outline" onClick={() => handleEdit(idx)} style={{ marginRight: 4 }}>Edit</Button>
               </TableCell>
