@@ -14,11 +14,6 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  {
-	title: "Price Comparison",
-	url: "/price-comparison",
-	icon: FileText,
-  },
 	{
 		title: "Dashboard",
 		url: "/",
@@ -35,6 +30,11 @@ const menuItems = [
 		icon: Plus,
 	},
 	{
+		title: "Price Comparison",
+		url: "/price-comparison",
+		icon: FileText,
+  },
+	{
 		title: "Delivery Challan",
 		url: "/delivery-challan",
 		icon: FileText,
@@ -50,26 +50,20 @@ const menuItems = [
 		icon: FileText,
 	},
 	{
-		title: "Settings",
-		url: "/settings",
-		icon: Settings,
-	},
-	{
 		title: "Taxes", 
 		url: "/tax", 
 		icon: Calendar,
 	},
-  {
-	title: "Purchases", 
-	url: "/purchases", 
-	icon: FileText,
-  },
-  {
-	title: "Vendors Invoices",
-	url: "/vendors-invoices",
-	icon: FileText,
-  },
-  // Removed extra blank sidebar entries as per user request
+	{
+		title: "Purchases", 
+		url: "/purchases", 
+		icon: FileText,
+	},
+	{
+		title: "Vendors Invoices",
+		url: "/vendors-invoices",
+		icon: FileText,
+	},
 ];
 
 

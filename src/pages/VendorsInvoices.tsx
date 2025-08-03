@@ -136,18 +136,19 @@ export default function VendorsInvoices() {
 
   const columns = [
     { key: "select", label: "", minWidth: 36 },
-    { key: "vendorName", label: "Vendor Name", minWidth: 120 },
-    { key: "itemName", label: "Item Name", minWidth: 120 },
-    { key: "totalInvoiceValue", label: "Total Invoice Value", minWidth: 80 },
+    { key: "vendorName", label: "Vendor Name", minWidth: 100 },
+    { key: "itemName", label: "Item Name", minWidth: 100 },
+    { key: "totalInvoiceValue", label: "Vendor Invoice without GST", minWidth: 80 },
     { key: "cgst", label: "CGST", minWidth: 60 },
     { key: "sgst", label: "SGST", minWidth: 60 },
     { key: "igst", label: "IGST", minWidth: 60 },
     { key: "paymentStatus", label: "Status", minWidth: 80 },
-    { key: "veshadInvoiceRefNo", label: "Veshad Invoice Ref No", minWidth: 120 },
-    { key: "veshadInvoiceValue", label: "Veshad Invoice Value", minWidth: 80 },
+    { key: "veshadInvoiceRefNo", label: "Veshad Invoice Ref No", minWidth: 100 },
+    { key: "veshadInvoiceValue", label: "Veshad Invoice without GST", minWidth: 80 },
     { key: "veshadSgst", label: "Veshad SGST", minWidth: 60 },
     { key: "veshadCgst", label: "Veshad CGST", minWidth: 60 },
     { key: "veshadIgst", label: "Veshad IGST", minWidth: 60 },
+    { key: "paid", label: "Paid", minWidth: 80 },
     { key: "actions", label: "Actions", minWidth: 80 },
   ];
 
@@ -232,6 +233,29 @@ export default function VendorsInvoices() {
               <TableCell className="border border-black text-right">{row.veshadSgst}</TableCell>
               <TableCell className="border border-black text-right">{row.veshadCgst}</TableCell>
               <TableCell className="border border-black text-right">{row.veshadIgst}</TableCell>
+              <TableCell className="border border-black text-center">
+                <button
+                  onClick={async () => {
+                    const updated = { ...row, paymentStatus: row.paymentStatus === "Paid" ? "Pending" : "Paid" };
+                    const res = await fetch(`/api/vendors-invoices/${row.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(updated),
+                    });
+                    if (res.ok) fetchData();
+                  }}
+                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 focus:outline-none ${row.paymentStatus === "Paid" ? "bg-green-500" : "bg-red-500"}`}
+                  aria-pressed={row.paymentStatus === "Paid"}
+                  style={{ marginRight: 8, border: 'none' }}
+                  title={row.paymentStatus === "Paid" ? "Mark as Unpaid" : "Mark as Paid"}
+                >
+                  <span
+                    className={`absolute left-0 top-0 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${row.paymentStatus === "Paid" ? "translate-x-6" : "translate-x-0"}`}
+                    style={{ border: '1px solid #ccc' }}
+                  />
+                  <span className="sr-only">{row.paymentStatus === "Paid" ? "Paid" : "Unpaid"}</span>
+                </button>
+              </TableCell>
               <TableCell className="border border-black text-center">
                 <Button size="sm" variant="outline" onClick={() => handleEdit(idx)} style={{ marginRight: 4 }}>Edit</Button>
               </TableCell>
