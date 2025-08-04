@@ -242,19 +242,14 @@ db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
   FOREIGN KEY (challanNo) REFERENCES delivery_challans(challanNo)
 )`);
 
-  // Company letters table
-  db.run(`CREATE TABLE IF NOT EXISTS company_letters (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    subject TEXT,
-    body TEXT
-  )`);
-
   // Letter table
   db.run(`CREATE TABLE IF NOT EXISTS letter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
-    body TEXT
+    subject TEXT,
+    body TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 });
 
@@ -1433,6 +1428,54 @@ app.post("/api/vendors-invoices/import", (req, res) => {
   });
 });
 // --- End Vendors Invoices API ---
+
+// --- End points for Letter ---
+
+// Get all letters
+app.get("/api/letters", (req, res) => {
+  db.all("SELECT * FROM letter ORDER BY id DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Get a letter by id
+app.get("/api/letters/:id", (req, res) => {
+  const { id } = req.params;
+  db.get("SELECT * FROM letter WHERE id = ?", [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: "Letter not found" });
+    res.json(row);
+  });
+});
+
+// Update a letter by id
+app.put("/api/letters/:id", (req, res) => {
+  const { id } = req.params;
+  const { date, subject, body } = req.body;
+  db.run(
+    `UPDATE letter SET date = ?, subject = ?, body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [date, subject, body, id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: "Letter not found" });
+      res.json({ id, date, subject, body });
+    }
+  );
+});
+
+// Delete a letter by id
+app.delete("/api/letters/:id", (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM letter WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: "Letter not found" });
+    res.json({ deleted: true, id });
+  });
+});
+
+
+// --- End of Lettet End Points ---
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
