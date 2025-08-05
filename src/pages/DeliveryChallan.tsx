@@ -388,14 +388,88 @@ export default function DeliveryChallan() {
   }
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, serif', fontSize: 16, maxWidth: 900, margin: '0 auto', padding: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <img src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" alt="Logo" style={{ height: 80, marginRight: 16 }} />
+    <div style={{ fontFamily: 'Times New Roman, serif', fontSize: 16, maxWidth: 900, margin: '0 auto', padding: 24, position: 'relative', minHeight: '100vh', background: `url('/lovable-uploads/letterhead-bg.png') no-repeat right top`, backgroundSize: 'contain' }}>
+      {/* Company header */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}>
+            <img src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" alt="Logo" style={{ height: 60, marginRight: 16 }} />
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: 22, color: '#2366a8', letterSpacing: 1 }}>VESHAD AND COMPANY</div>
+              <div style={{ color: '#2366a8', fontSize: 15, fontWeight: 500, lineHeight: 1.2 }}>
+                # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, 
+                BANGALORE - 560008, KARNATAKA, INDIA<br />
+                Landline:- (91) - 80 - 25272041,  
+                Mobile :- (91) 9036644721<br />
+                Email:- veshad@outlook.com / veshad.blr@gmail.com
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <hr style={{ border: 0, borderTop: '2px solid #2366a8', margin: '12px 0' }} />
+        </div>
         <h2 style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 22, flex: 1 }}>
           {challan.isEditing ? 'Edit Delivery Challan' : 'Delivery Challan'}
         </h2>
+        <div>
+          <div style={{ fontWeight: 'bold', fontSize: 16, letterSpacing: 1 }}>Company:</div>
+          <div style={{ fontWeight: 'bold', fontSize: 16, letterSpacing: 1 }}>VESHAD AND COMPANY</div>
+          <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.2 }}>
+            # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,
+            BANGALORE - 560008, KARNATAKA, INDIA<br />
+            Landline:- (91) - 80 - 25272041,    
+            Mobile :- (91) 9036644721<br />
+            Email:- veshad@outlook.com / veshad.blr@gmail.com<br />
+            GST: 29DXRPS1061J1ZS
+          </div>
+        </div>
+      <div>
+          <hr style={{ border: 0, borderTop: '2px solid #000', margin: '12px 0' }} />
       </div>
-      <div style={{ marginBottom: 12 }}>
+      {/* Delivery Challan No, Order Date, Dispatch Date fields in a single flex row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, width: '100%' }}>
+        <div style={{ flex: 1, marginRight: 12 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Delivery Challan No:
+          </label>
+          <input
+            name="challanNo"
+            value={challan.challanNo || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+            disabled={challan.isEditing}
+          />
+        </div>
+        <div style={{ flex: 1, marginRight: 12 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Order Date:
+          </label>
+          <input
+            name="order_date"
+            type="date"
+            value={challan.order_date || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+            disabled={challan.isEditing}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Dispatch Date:
+          </label>
+          <input
+            name="dispatch_date"
+            type="date"
+            value={challan.dispatch_date || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+          />
+        </div>
+      </div>
+      <div>
+          <hr style={{ border: 0, borderTop: '2px solid #000', margin: '12px 0' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <label>Invoice Number: </label>
         <select
           value={invoiceNumber}
@@ -411,53 +485,26 @@ export default function DeliveryChallan() {
             </option>
           ))}
         </select>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-         <div>
-          <label>
-            Dispatch Date:{" "}
-            <input
-              name="dispatch_date"
-              type="date"
-              value={challan.dispatch_date || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-            />
-          </label>
-        </div>
-         <div>
-          <label>
-            Order Date:{" "}
-            <input
-              name="order_date"
-              type="date"
-              value={challan.order_date || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-              disabled={challan.isEditing}
-            />
-          </label>
-        </div>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <label>
-            Bill To Address:{" "}
-            <input
-              name="bill_to_address"
-              value={challan.bill_to_address || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-              disabled={challan.isEditing}
-            />
-          </label>
-        </div>
-        <div>
           <label>
             E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} disabled={challan.isEditing} />
           </label>
+        <div><br /></div>
+         </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: "block", fontSize: 16, marginBottom: 4 }}>
+            Bill To Address:
+          </label>
+          <textarea
+            name="bill_to_address"
+            value={challan.bill_to_address || ""}
+            onChange={handleChange}
+            rows={3}
+            style={{ width: 300, fontSize: 16 }}
+            disabled
+          />
         </div>
         </div>
-      </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }} border={1}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
@@ -479,6 +526,20 @@ export default function DeliveryChallan() {
         </tbody>
       </table>
       <button type="button" onClick={addItem} style={{ fontSize: 16, background: '#3182ce', color: 'white', border: 'none', borderRadius: 4, padding: '6px 18px', cursor: 'pointer', marginBottom: 16 }}>Add Item</button>
+      <div><br /></div>
+      <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.2, textAlign: "center",  }}>
+            Confirm receipt of above in good order.
+      </div>
+      <div>
+          <div><br /></div>
+            Name: <br />
+            Signature: 
+            <div><br /></div>
+
+            Date:<br />
+            Company Seal: 
+
+          </div>
       <div style={{ textAlign: 'center', marginTop: 24 }}>
         <button type="button" onClick={handleSave} style={{ fontSize: 18, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer', marginRight: 16 }}>
           {challan.isEditing ? 'Update DC' : 'Save DC'}
