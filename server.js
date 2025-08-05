@@ -246,6 +246,7 @@ db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
   db.run(`CREATE TABLE IF NOT EXISTS letter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
+    "to" TEXT,
     subject TEXT,
     body TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1449,17 +1450,33 @@ app.get("/api/letters/:id", (req, res) => {
   });
 });
 
+// post a new letter
+app.post("/api/letters", (req, res) => {
+  const { date, to, subject, body } = req.body;
+  if (!date || !subject || !body) {
+    return res.status(400).json({ error: "Date, subject and body are required" });
+  }
+  db.run(
+    `INSERT INTO letter (date, "to", subject, body, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [date, to, subject, body],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id: this.lastID, date, to, subject, body });
+    }
+  );
+});
+
 // Update a letter by id
 app.put("/api/letters/:id", (req, res) => {
   const { id } = req.params;
-  const { date, subject, body } = req.body;
+  const { date, to, subject, body } = req.body;
   db.run(
-    `UPDATE letter SET date = ?, subject = ?, body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [date, subject, body, id],
+    `UPDATE letter SET date = ?, "to" = ?, subject = ?, body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [date, to, subject, body, id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: "Letter not found" });
-      res.json({ id, date, subject, body });
+      res.json({ id, date, to, subject, body });
     }
   );
 });
