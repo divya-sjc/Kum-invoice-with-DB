@@ -183,9 +183,9 @@ const months = Array.from(
 
 
    const matchesMonth = selectedMonth ? monthLabel === selectedMonth : true;
-   const matchesSearch = searchTerm
-     ? p.description.toLowerCase().includes(searchTerm.toLowerCase())
-     : true;
+   const matchesSearch = searchTerm.trim()
+  ? (typeof p.description === 'string' && p.description.toLowerCase().includes(searchTerm.trim().toLowerCase()))
+  : true;
 
 
    return matchesMonth && matchesSearch;
