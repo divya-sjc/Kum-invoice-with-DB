@@ -11,7 +11,8 @@ const draftTemplate1 = `To,
 const draftTemplate2 = `Veshad And Company	
 2876,1st Main Kodihalli,
 HAL 2nd Stage, Bangalore -560008.Karnataka.
-+918317368522 / 9611355110
+(91) - 80 - 35550915
++91 8317368522 / 9611355110
 `;
 
 const draftTemplate3 = `
@@ -212,25 +213,23 @@ export default function CompanyLetterHead() {
       doc.addImage(watermarkBase64, 'JPEG', pageWidth/2-120, 250, 240, 240, undefined, 'NONE', 0.03);
       // Heading text
       doc.setFont('Times', 'bold');
-      doc.setFontSize(22);
+      doc.setFontSize(18);
       doc.setTextColor('#2366a8');
       doc.text('VESHAD AND COMPANY', margin+70, y+20);
       doc.setFont('Times', 'normal');
-      doc.setFontSize(13);
+      doc.setFontSize(10);
       doc.setTextColor('#2366a8');
-      doc.text('# 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,', margin+70, y+38);
-      doc.text('BANGALORE - 560008, KARNATAKA, INDIA', margin+70, y+53);
-      doc.text('Landline:- (91) - 80 - 25272041', margin+70, y+68);
-      doc.text('Mobile :- (91) 9036644721', margin+70, y+83);
-      doc.text('Email:- veshad@outlook.com / veshad.blr@gmail.com', margin+70, y+98);
+      doc.text('# 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, BANGALORE - 560008, KARNATAKA, INDIA', margin+70, y+38)
+      doc.text('Landline:- (91) - 80 - 35550915,  Mobile :- 8317368522 / 9611355110', margin+70, y+48);
+      doc.text('Email:- admin@veshad.com / veshad.blr@gmail.com', margin+70, y+58);
       // Blue line
       doc.setDrawColor('#2366a8');
       doc.setLineWidth(2);
-      doc.line(margin, y+110, pageWidth-margin, y+110);
+      doc.line(margin, y+70, pageWidth-margin, y+70);
       y += 130;
       doc.setTextColor('#000');
       doc.setFont('Times', 'normal');
-      doc.setFontSize(13);
+      doc.setFontSize(12);
       // Date
       doc.text(`Date: ${letter.date}`, margin, y);
       y += 20;
@@ -280,8 +279,8 @@ export default function CompanyLetterHead() {
               <div style={{ color: '#2366a8', fontSize: 15, fontWeight: 500, lineHeight: 1.2 }}>
                 # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,<br />
                 BANGALORE - 560008, KARNATAKA, INDIA<br />
-                Landline:- (91) - 80 - 25272041<br />
-                Mobile :- (91) 9036644721<br />
+                Landline:- (91) - 80 - 35550915
+                Mobile :- 8317368522 / 9611355110<br />
                 Email:- veshad@outlook.com / veshad.blr@gmail.com
               </div>
             </div>
@@ -334,8 +333,8 @@ export default function CompanyLetterHead() {
             <div style={{ color: '#2366a8', fontSize: 15, fontWeight: 500, lineHeight: 1.2 }}>
               # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,
               BANGALORE - 560008, KARNATAKA, INDIA<br />
-              Landline:- (91) - 80 - 25272041,    
-              Mobile :- (91) 9036644721<br />
+              Landline:- (91) - 80 - 35550915,    
+              Mobile :- 8317368522 / 9611355110<br />
               Email:- veshad@outlook.com / veshad.blr@gmail.com<br />
               GST: 29DXRPS1061J1ZS
             </div>

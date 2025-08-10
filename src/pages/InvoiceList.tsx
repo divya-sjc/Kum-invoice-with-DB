@@ -69,6 +69,7 @@ const InvoiceList = () => {
     paymentBankRef: '',
     paymentDate: '',
     paymentStatus: 'Pending',
+    miscNotes: '', // Add miscNotes to paymentForm
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
@@ -79,7 +80,7 @@ const InvoiceList = () => {
     paymentDate: '',
     notes: '',
     activeTab: 'payment' as 'payment' | 'misc',
-    miscNotes: '', // Ensure miscNotes is always initialized
+    miscNotes: '',
   });
   const [exporting, setExporting] = useState(false);
   const [years, setYears] = useState<string[]>([]);
@@ -204,6 +205,7 @@ const InvoiceList = () => {
       paymentBankRef: invoice.paymentBankRef ?? '',
       paymentDate: invoice.paymentDate ?? '',
       paymentStatus: invoice.paymentStatus ?? 'Pending',
+      miscNotes: invoice.miscNotes ?? '', // Initialize miscNotes
     });
   };
 
@@ -222,6 +224,7 @@ const InvoiceList = () => {
       paymentBankRef: paymentForm.paymentBankRef,
       paymentDate: paymentForm.paymentDate,
       paymentStatus: paymentForm.paymentStatus,
+      miscNotes: paymentForm.miscNotes, // Save miscNotes
       balanceDue: (editPaymentInvoice.grandTotal ?? 0) - Number(paymentForm.paymentReceived),
     };
     try {
@@ -251,7 +254,7 @@ const InvoiceList = () => {
       paymentReceived: invoice.paymentReceived?.toString() || '',
       paymentDate: invoice.paymentDate ? format(new Date(invoice.paymentDate), 'yyyy-MM-dd') : '',
       notes: typeof invoice.notes === 'string' ? invoice.notes : '', // Defensive: always string
-      miscNotes: typeof invoice.miscNotes === 'string' ? invoice.miscNotes : '', // Defensive: always string
+      miscNotes: invoice.miscNotes || '',
       activeTab: 'payment', // Default to Payment Info tab
     });
     setEditModalOpen(true);
@@ -261,6 +264,9 @@ const InvoiceList = () => {
   const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditFields(prev => ({ ...prev, [name]: value }));
+    // if (name === 'miscNotes') {
+    //   setEditInvoice(prev => prev ? { ...prev, miscNotes: value } : prev);
+    // }
   };
 
   // Save payment info
@@ -277,7 +283,8 @@ const InvoiceList = () => {
         paymentBankRef: editFields.paymentBankRef,
         paymentReceived: Number(editFields.paymentReceived) || 0,
         paymentDate: editFields.paymentDate || null,
-        miscNotes: editFields.miscNotes || '', // Save Misc Notes from modal
+        miscNotes: editFields.miscNotes !== undefined ? editFields.miscNotes : latestInvoice.miscNotes || '', // Always send miscNotes
+        notes: editFields.notes !== undefined ? editFields.notes : latestInvoice.notes || '', // Defensive: always send notes
       };
       const res = await fetch(`http://localhost:4000/api/invoices/${encodeURIComponent(editInvoice.invoiceNumber)}`, {
         method: 'PUT',
@@ -287,6 +294,8 @@ const InvoiceList = () => {
       if (!res.ok) throw new Error('Failed to update payment info');
       // Update frontend state
       setInvoices((prev) => prev.map(inv => inv.invoiceNumber === updated.invoiceNumber ? { ...inv, ...updated } : inv));
+      setEditInvoice(prev => prev ? { ...prev, ...updated } : prev);
+      setEditFields(prev => ({ ...prev, miscNotes: updated.miscNotes }));
       setEditModalOpen(false);
       toast({ title: 'Payment Info Updated', description: `Invoice ${updated.invoiceNumber} payment info updated.` });
       // Force EditInvoice to refetch by navigating to edit page with a unique param
@@ -458,6 +467,13 @@ const InvoiceList = () => {
               <option value="Pending">Pending</option>
               <option value="Paid">Paid</option>
             </select>
+            <label className="text-xs font-medium">Misc Notes</label>
+            <textarea
+              className="border rounded w-full p-2 min-h-[60px] text-sm"
+              value={paymentForm.miscNotes}
+              name="miscNotes"
+              onChange={e => handlePaymentFormChange('miscNotes', e.target.value)}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closePaymentModal}>Cancel</Button>

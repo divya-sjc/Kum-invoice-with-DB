@@ -28,19 +28,16 @@ export default function ChallanPreview({ challan, onBack }) {
       // Watermark (center, faded)
       const watermarkBase64 = String(await getBase64FromUrl(watermarkImg));
       doc.addImage(watermarkBase64, 'JPEG', pageWidth/2-120, 250, 240, 240, undefined, 'NONE', 0.03);
-      // Heading text (blue)
       doc.setFont('Times', 'bold');
-      doc.setFontSize(20);
+      doc.setFontSize(18);
       doc.setTextColor('#2366a8');
-      doc.text('VESHAD AND COMPANY', margin+70, y+18);
+      doc.text('VESHAD AND COMPANY', margin+70, y+20);
       doc.setFont('Times', 'normal');
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor('#2366a8');
-      doc.text('# 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,', margin+70, y+32);
-      doc.text('BANGALORE - 560008, KARNATAKA, INDIA', margin+70, y+44);
-      doc.text('Landline:- (91) - 80 - 25272041', margin+70, y+56);
-      doc.text('Mobile :- (91) 9036644721', margin+70, y+68);
-      doc.text('Email:- veshad@outlook.com / veshad.blr@gmail.com', margin+70, y+80);
+      doc.text('# 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, BANGALORE - 560008, KARNATAKA, INDIA', margin+70, y+38)
+      doc.text('Landline:- (91) - 80 - 35550915,  Mobile :- (91) 8317368522 / 9611355110', margin+70, y+48);
+      doc.text('Email:- admin@veshad.com / veshad.blr@gmail.com', margin+70, y+58);
       // Move y below address block for Delivery Challan heading
       let headingBottomY = y + 100; // 18+80+extra spacing
       // Delivery challan heading below address
@@ -164,8 +161,8 @@ export default function ChallanPreview({ challan, onBack }) {
               <div style={{ color: '#2366a8', fontSize: 15, fontWeight: 500, lineHeight: 1.2 }}>
                 # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, 
                 BANGALORE - 560008, KARNATAKA, INDIA<br />
-                Landline:- (91) - 80 - 25272041,  
-                Mobile :- (91) 9036644721<br />
+                Landline:- (91) - 80 - 35550915,  
+                Mobile :- (91) 8317368522// 9611355110<br />
                 Email:- veshad@outlook.com / veshad.blr@gmail.com
               </div>
             </div>
@@ -180,8 +177,8 @@ export default function ChallanPreview({ challan, onBack }) {
           <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.2 }}>
             # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,
             BANGALORE - 560008, KARNATAKA, INDIA<br />
-            Landline:- (91) - 80 - 25272041,    
-            Mobile :- (91) 9036644721<br />
+            Landline:- (91) - 80 - 35550915,    
+            Mobile :- (91) 8317368522// 9611355110<br />
             Email:- veshad@outlook.com / veshad.blr@gmail.com<br />
             GST: 29DXRPS1061J1ZS
           </div>
