@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusIcon, TrashIcon, UploadIcon } from "lucide-react";
 import * as XLSX from "xlsx";
+import { time } from "console";
 
 const emptyInvoice = {
   id: 0,
+  date: new Date().toISOString().split("T")[0],
   vendorName: "",
   itemName: "",
   totalInvoiceValue: 0,
@@ -136,6 +138,7 @@ export default function VendorsInvoices() {
 
   const columns = [
     { key: "select", label: "", minWidth: 36 },
+    { key: "date", label: "Date", minWidth: 36 },
     { key: "vendorName", label: "Vendor Name", minWidth: 100 },
     { key: "itemName", label: "Item Name", minWidth: 100 },
     { key: "totalInvoiceValue", label: "Vendor Invoice without GST", minWidth: 80 },
@@ -224,6 +227,7 @@ export default function VendorsInvoices() {
                   }}
                 />
               </TableCell>
+              <TableCell className="border border-black">{row.date}</TableCell>
               <TableCell className="border border-black">{row.vendorName}</TableCell>
               <TableCell className="border border-black">{row.itemName}</TableCell>
               <TableCell className="border border-black text-right">{row.totalInvoiceValue}</TableCell>
@@ -277,6 +281,7 @@ export default function VendorsInvoices() {
           <div className="bg-white rounded-lg p-6 min-w-[340px] max-w-[90vw] shadow-lg">
             <h3 className="text-xl font-bold mb-4">{editIdx === null ? "Add Vendor Invoice" : "Edit Vendor Invoice"}</h3>
             <div className="grid grid-cols-2 gap-3 mb-4">
+              <label className="flex flex-col text-sm">Date<input name="date" value={editData.date} onChange={handleInputChange} className="border rounded px-2 py-1" /></label>
               <label className="flex flex-col text-sm">Vendor Name<input name="vendor_name" value={editData.vendorName} onChange={handleInputChange} className="border rounded px-2 py-1" /></label>
               <label className="flex flex-col text-sm">Item Name<input name="item_name" value={editData.itemName} onChange={handleInputChange} className="border rounded px-2 py-1" /></label>
               <label className="flex flex-col text-sm">Total Invoice Value<input name="total_invoice_value" type="number" value={editData.total_invoice_value} onChange={handleInputChange} className="border rounded px-2 py-1" /></label>
@@ -299,4 +304,8 @@ export default function VendorsInvoices() {
       )}
     </Card>
   );
+}
+
+function timmestampToDate(arg0: number) {
+  throw new Error("Function not implemented.");
 }
