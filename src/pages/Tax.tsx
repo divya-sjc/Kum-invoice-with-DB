@@ -5,6 +5,9 @@ type Invoice = {
 	cgst?: number;
 	sgst?: number;
 	igst?: number;
+	veshadCgst?: number;
+	veshadSgst?: number;
+	veshadIgst?: number;
 };
 
 const monthNames = [
@@ -43,6 +46,9 @@ export default function TaxSummary() {
 					cgst: 0,
 					sgst: 0,
 					igst: 0,
+					veshadCgst: 0,
+					veshadSgst: 0,
+					veshadIgst: 0,
 					month: date.getMonth(),
 					year: date.getFullYear(),
 				};
@@ -50,11 +56,14 @@ export default function TaxSummary() {
 			acc[key].cgst += inv.cgst || 0;
 			acc[key].sgst += inv.sgst || 0;
 			acc[key].igst += inv.igst || 0;
+			acc[key].veshadCgst += inv.veshadCgst || 0;
+			acc[key].veshadSgst += inv.veshadSgst || 0;
+			acc[key].veshadIgst += inv.veshadIgst || 0;
 			return acc;
 		},
 		{} as Record<
 			string,
-			{ cgst: number; sgst: number; igst: number; month: number; year: number }
+			{ cgst: number; sgst: number; igst: number; veshadCgst: number; veshadSgst: number; veshadIgst: number; month: number; year: number }
 		>
 	);
 
@@ -117,11 +126,18 @@ export default function TaxSummary() {
 							<th className="border px-4 py-2">CGST Collected</th>
 							<th className="border px-4 py-2">SGST Collected</th>
 							<th className="border px-4 py-2">IGST Collected</th>
+							<th className="border px-4 py-2">Veshad CGST</th>
+							<th className="border px-4 py-2">Veshad SGST</th>
+							<th className="border px-4 py-2">Veshad IGST</th>
+							<th className="border px-4 py-2">Recedual</th>
 						</tr>
 					</thead>
 					<tbody>
 						{sortedKeys.map((key) => {
-							const { cgst, sgst, igst, month, year } = taxByMonth[key];
+							const { cgst, sgst, igst, veshadCgst, veshadSgst, veshadIgst, month, year } = taxByMonth[key];
+							const totalGST = (cgst || 0) + (sgst || 0) + (igst || 0);
+							const totalVeshadGST = (veshadCgst || 0) + (veshadSgst || 0) + (veshadIgst || 0);
+							const recedual = totalGST - totalVeshadGST;
 							return (
 								<tr key={key}>
 									<td className="border px-4 py-2 font-medium">
@@ -135,6 +151,18 @@ export default function TaxSummary() {
 									</td>
 									<td className="border px-4 py-2 text-green-800">
 										₹{igst.toLocaleString("en-IN")}
+									</td>
+									<td className="border px-4 py-2 text-blue-800">
+										₹{veshadCgst.toLocaleString("en-IN")}
+									</td>
+									<td className="border px-4 py-2 text-blue-800">
+										₹{veshadSgst.toLocaleString("en-IN")}
+									</td>
+									<td className="border px-4 py-2 text-blue-800">
+										₹{veshadIgst.toLocaleString("en-IN")}
+									</td>
+									<td className="border px-4 py-2 text-red-800 font-bold">
+										₹{recedual.toLocaleString("en-IN")}
 									</td>
 								</tr>
 							);
