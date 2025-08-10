@@ -80,7 +80,7 @@ export default function CompanyLetterHead() {
   useEffect(() => {
     // Reset editableDraft when form is opened or closed
     if (showForm) {
-      setEditableDraft(draftTemplate4);
+      setEditableDraft(letter.body || draftTemplate4);
     }
   }, [showForm]);
 
@@ -311,7 +311,16 @@ export default function CompanyLetterHead() {
             <div style={{ whiteSpace: 'pre-wrap', marginLeft: 8 }}>{letter.body}</div>
           </div>
           <div style={{ textAlign: 'center', marginTop: 24, display: 'flex', justifyContent: 'center', gap: 16 }}>
-            <button type="button" onClick={() => setPreviewMode(false)} style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Edit</button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditableDraft(letter.body || draftTemplate4);
+                setPreviewMode(false);
+              }}
+              style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}
+            >
+              Edit
+            </button>
             <button type="button" onClick={handleDownloadPDF} style={{ fontSize: 18, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Download PDF</button>
             <button type="button" onClick={() => { setShowForm(false); setPreviewMode(false); }} style={{ fontSize: 18, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Back</button>
           </div>
