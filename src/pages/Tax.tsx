@@ -26,21 +26,23 @@ const monthNames = [
 ];
 
 export default function TaxSummary() {
-	const [invoices, setInvoices] = useState<Invoice[]>([]);
-	const [selectedYear, setSelectedYear] = useState<string>("");
+	const [vendors_invoices, setVendorInvoices] = useState<Invoice[]>([]);
+	const [selectedYear, setSelectedYear] = useState<string>("2025");
 
 	useEffect(() => {
-		fetch("http://localhost:4000/api/invoices")
+		fetch("http://localhost:4000/api/vendors-invoices")
 			.then((res) => res.json())
-			.then(setInvoices)
-			.catch(() => setInvoices([]));
+			.then(setVendorInvoices)
+			.catch(() => setVendorInvoices([]));
 	}, []);
 
 	// Group by year-month
-	const taxByMonth = invoices.reduce(
+	const taxByMonth = vendors_invoices.reduce(
 		(acc, inv) => {
-			const date = new Date(inv.date);
-			const key = `${date.getFullYear()}-${date.getMonth()}`;
+			if (!inv.date) return acc;
+			const dateObj = new Date(inv.date);
+			if (isNaN(dateObj.getTime())) return acc;
+			const key = `${dateObj.getFullYear()}-${dateObj.getMonth()}`;
 			if (!acc[key]) {
 				acc[key] = {
 					cgst: 0,
@@ -49,8 +51,8 @@ export default function TaxSummary() {
 					veshadCgst: 0,
 					veshadSgst: 0,
 					veshadIgst: 0,
-					month: date.getMonth(),
-					year: date.getFullYear(),
+					month: dateObj.getMonth(),
+					year: dateObj.getFullYear(),
 				};
 			}
 			acc[key].cgst += inv.cgst || 0;
@@ -70,12 +72,15 @@ export default function TaxSummary() {
 	// Get all years present in the data
 	const years = useMemo(() => {
 		const set = new Set<string>();
-		invoices.forEach((inv) => {
-			const year = new Date(inv.date).getFullYear().toString();
+		vendors_invoices.forEach((inv) => {
+			if (!inv.date) return;
+			const dateObj = new Date(inv.date);
+			if (isNaN(dateObj.getTime())) return;
+			const year = dateObj.getFullYear().toString();
 			set.add(year);
 		});
 		return Array.from(set).sort((a, b) => b.localeCompare(a)); // Descending
-	}, [invoices]);
+	}, [vendors_invoices]);
 
 	// Set default year to latest
 	useEffect(() => {
@@ -137,7 +142,7 @@ export default function TaxSummary() {
 							const { cgst, sgst, igst, veshadCgst, veshadSgst, veshadIgst, month, year } = taxByMonth[key];
 							const totalGST = (cgst || 0) + (sgst || 0) + (igst || 0);
 							const totalVeshadGST = (veshadCgst || 0) + (veshadSgst || 0) + (veshadIgst || 0);
-							const recedual = totalGST - totalVeshadGST;
+							const recedual =  totalVeshadGST - totalGST;
 							return (
 								<tr key={key}>
 									<td className="border px-4 py-2 font-medium">
