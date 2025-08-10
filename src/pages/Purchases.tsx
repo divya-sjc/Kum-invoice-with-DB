@@ -414,7 +414,7 @@ const months = Array.from(
      });
 
 
-     fetchData(); // Reload the data
+     await fetchData(); // Ensure table is refreshed from DB
      setEditingId(null);
      setEditData(null);
    } catch (err) {
@@ -537,8 +537,13 @@ const months = Array.from(
  };
 
 
+ // Helper: get column widths in px
+const getColWidths = () => columns.map(col => col.minWidth + 'px');
+const colWidths = getColWidths();
+const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
+
  return (
-   <Card className="p-4 mt-6 overflow-x-auto">
+   <Card className="p-4 mt-6">
      {/* Header Toolbar */}
      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
        <h2 className="text-2xl font-bold">Purchases</h2>
@@ -613,109 +618,118 @@ const months = Array.from(
      </div>
 
 
-     {/* Table */}
-     <Table className="table-auto w-full text-sm border border-black">
-  <TableHeader className="border border-black">
-    <TableRow>
-      {columns.map((col, idx) => (
-        <TableHead
-          key={col.key}
-          style={{
-            minWidth: col.minWidth,
-            maxWidth: col.maxWidth,
-            width: col.minWidth,
-            position: 'relative',
-            background: selectedColIdx === idx ? '#dbeafe' : undefined,
-            cursor: 'pointer',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            userSelect: undefined,
-            paddingRight: 0,
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-          }}
-          className="!py-0 group text-base border border-black text-center"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%' }}>
-            {/* Only for the first column (select) */}
-            {col.key === 'select' ? (
-              <input
-                type="checkbox"
-                checked={selectAllRows}
-                onChange={e => {
-                  setSelectAllRows(e.target.checked);
-                  if (e.target.checked) {
-                    setSelectedRows(filteredData.map(p => parseInt(p.slNo, 10)).filter(n => !isNaN(n)));
-                  } else {
-                    setSelectedRows([]);
-                  }
+     {/* Table with static header and scrollable body */}
+    <div style={{ maxHeight: 600, overflow: 'auto', width: '100%' }}>
+        <table className="table-auto text-sm border border-black" style={{ tableLayout: 'fixed', minWidth: '100%' }}>
+          <colgroup>
+            {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
+          </colgroup>
+          <thead className="bg-white">
+            <tr>
+              {columns.map((col, idx) => (
+                <th
+                  key={col.key}
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    background: selectedColIdx === idx ? '#dbeafe' : '#fff',
+                    cursor: 'pointer',
+                    zIndex: 5,
+                    border: '1px solid black',
+                    minWidth: col.minWidth,
+                    maxWidth: col.maxWidth,
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                    padding: '4px'
+                  }}
+                  className="text-base text-center"
+                >
+                  {col.key === 'select' ? (
+                    <input
+                      type="checkbox"
+                      checked={selectAllRows}
+                      onChange={e => {
+                        setSelectAllRows(e.target.checked);
+                        setSelectedRows(
+                          e.target.checked
+                            ? filteredData.map(p => parseInt(p.slNo, 10)).filter(n => !isNaN(n))
+                            : []
+                        );
+                      }}
+                      title="Select all rows"
+                    />
+                  ) : (
+                    <span className="text-base">{col.label}</span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Totals row */}
+            <tr>
+              <td colSpan={4} className="font-bold text-right border border-black">
+                Total
+              </td>
+              <td className="text-right font-bold bg-green-200 border border-black">
+                ₹ {totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </td>
+              <td className="text-right font-bold bg-yellow-200 border border-black">
+                ₹ {totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </td>
+              {/* Fill remaining columns */}
+              {columns.length > 6 && Array.from({ length: columns.length - 6 }).map((_, i) => (
+                <td key={i} className="border border-black"></td>
+              ))}
+            </tr>
+
+            {/* Data rows */}
+            {filteredData.map((p) => (
+              <tr key={p.slNo}
+                style={{
+                  backgroundColor: p.credit ? "#d1fad1" : p.debit ? "#fff3b0" : "transparent"
                 }}
-                title="Select all rows"
-              />
-            ) : (
-              <span className="text-base">{col.label}</span>
-            )}
-          </div>
-        </TableHead>
-      ))}
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    <TableRow>
-      <TableCell colSpan={4} className="font-bold text-right border border-black">
-        Total
-      </TableCell>
-      <TableCell className="text-right font-bold bg-green-200 border border-black">
-         {totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-      </TableCell>
-      <TableCell className="text-right font-bold bg-yellow-200 border border-black">
-         {totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-      </TableCell>
-    </TableRow>
-    {filteredData.map((p) => (
-      <TableRow key={p.slNo}>
-        {/* Checkbox cell */}
-        <TableCell className="border border-black text-center">
-          <input
-            type="checkbox"
-            checked={selectedRows.includes(parseInt(p.slNo, 10))}
-            onChange={e => {
-              const slNo = parseInt(p.slNo, 10);
-              if (e.target.checked) {
-                setSelectedRows(prev => [...prev, slNo]);
-              } else {
-                setSelectedRows(prev => prev.filter(n => n !== slNo));
-              }
-            }}
-          />
-        </TableCell>
-        {/* The rest of the columns */}
-        <TableCell className="border border-black">{p.slNo}</TableCell>
-        <TableCell className="border border-black">{formatDateDDMMMYYYY(p.date)}</TableCell>
-        <TableCell className="whitespace-nowrap overflow-hidden border border-black">{p.description}</TableCell>
-        <TableCell className="text-right border border-black">
-          {p.credit?.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-          })}
-        </TableCell>
-        <TableCell className="text-right border border-black">
-          {p.debit?.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-          })}
-        </TableCell>
-        <TableCell className="border border-black">{p.bankPaymentRef}</TableCell>
-        <TableCell className="whitespace-nowrap overflow-hidden border border-black">{p.clientName}</TableCell>
-        <TableCell className="border border-black">{p.paymentRemarks}</TableCell>
-        <TableCell className="border border-black">{p.refBankName}</TableCell>
-        <TableCell className="border border-black">{p.invoiceNo}</TableCell>
-        <TableCell className="border border-black">{p.inputCgst}</TableCell>
-        <TableCell className="border border-black">{p.inputSgst}</TableCell>
-        <TableCell className="border border-black">{p.inputIgst}</TableCell>
-        <TableCell className="whitespace-nowrap overflow-hidden border border-black">{p.created_at}</TableCell>
-      </TableRow>
-    ))}
-  </TableBody>
-</Table>
+              >
+                {/* Checkbox */}
+                <td className="border border-black text-center" align="center">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.includes(parseInt(p.slNo, 10))}
+                    onChange={e => {
+                      const slNo = parseInt(p.slNo, 10);
+                      if (e.target.checked) {
+                        setSelectedRows(prev => [...prev, slNo]);
+                      } else {
+                        setSelectedRows(prev => prev.filter(n => n !== slNo));
+                      }
+                    }}
+                  />
+                </td>
+
+                {/* Other cells */}
+                <td className="border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>{p.slNo}</td>
+                <td className="border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>{formatDateDDMMMYYYY(p.date)}</td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.description}</td>
+                <td className="text-right border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
+                  {p.credit?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </td>
+                <td className="text-right border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
+                  {p.debit?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.bankPaymentRef}</td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.clientName}</td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.paymentRemarks}</td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.refBankName}</td>
+                <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.invoiceNo}</td>
+                <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputCgst}</td>
+                <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputSgst}</td>
+                <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputIgst}</td>
+                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.created_at}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
 
      {/* Edit/Add Modal */}
