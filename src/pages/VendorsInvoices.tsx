@@ -148,7 +148,6 @@ export default function VendorsInvoices() {
     { key: "veshadSgst", label: "Veshad SGST", minWidth: 60 },
     { key: "veshadCgst", label: "Veshad CGST", minWidth: 60 },
     { key: "veshadIgst", label: "Veshad IGST", minWidth: 60 },
-    { key: "paid", label: "Paid", minWidth: 80 },
     { key: "actions", label: "Actions", minWidth: 80 },
   ];
 
@@ -195,6 +194,10 @@ export default function VendorsInvoices() {
             <TableHead className="border border-black text-center" style={{ minWidth: columns[0].minWidth }}>
               <input
                 type="checkbox"
+                style={{
+                    position: 'sticky',
+                    top: 0
+                }}
                 ref={selectAllRef}
                 checked={rows.length > 0 && selectedRows.length === rows.length}
                 onChange={e => {
