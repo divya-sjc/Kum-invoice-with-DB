@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ChallanPreview from "../pages/ChallanPreview"; // Import the ChallanPreview component
 
 // Editable Delivery Challan form based on PDF structure
 const initialChallan = {
@@ -146,6 +147,7 @@ export default function DeliveryChallan() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceOptions, setInvoiceOptions] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
 
   // Fetch invoice options on mount
   useEffect(() => {
@@ -304,6 +306,12 @@ export default function DeliveryChallan() {
     }
   };
 
+  if (showPreview) {
+    return (
+      <ChallanPreview challan={challan} onBack={() => setShowPreview(false)} />
+    );
+  }
+
   if (!showForm) {
     return (
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24 }}>
@@ -390,7 +398,7 @@ export default function DeliveryChallan() {
   return (
     <div style={{ fontFamily: 'Times New Roman, serif', fontSize: 16, maxWidth: 900, margin: '0 auto', padding: 24, position: 'relative', minHeight: '100vh', background: `url('/lovable-uploads/letterhead-bg.png') no-repeat right top`, backgroundSize: 'contain' }}>
       {/* Company header */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: 32 }}>
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 32, display: 'flex', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}>
             <img src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" alt="Logo" style={{ height: 60, marginRight: 16 }} />
             <div>
@@ -505,22 +513,37 @@ export default function DeliveryChallan() {
           />
         </div>
         </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }} border={1}>
+      <table className="table-auto w-full text-sm border border-black" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 , justifyContent: 'space-between'}} border={1}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Remarks</th>
-            <th>Action</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 300, border: '1px solid #000' }}>Description</th>
+            <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Quantity</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 160, border: '1px solid #000' }}>Remarks</th>
+            <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Action</th>
           </tr>
         </thead>
         <tbody>
           {challan.items.map((item, idx) => (
             <tr key={idx}>
-              <td><input name="item_description" value={item.item_description} onChange={e => handleItemChange(idx, e)} style={{ width: 200, fontSize: 16 }} /></td>
-              <td><input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 60, fontSize: 16 }} /></td>
-              <td><input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: 120, fontSize: 16 }} /></td>
-              <td><button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 16, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button></td>
+              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <textarea
+                  name="item_description"
+                  value={item.item_description}
+                  onChange={e => handleItemChange(idx, e)}
+                  style={{ width: '100%', fontSize: 16, resize: 'vertical', minWidth: 300, boxSizing: 'border-box' }}
+                  rows={2}
+                  wrap="soft"
+                />
+              </td>
+              <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 60, fontSize: 16, textAlign: 'center' }} />
+              </td>
+              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: '100%', minWidth: 120, fontSize: 16 }} />
+              </td>
+              <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 16, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -544,7 +567,8 @@ export default function DeliveryChallan() {
         <button type="button" onClick={handleSave} style={{ fontSize: 18, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer', marginRight: 16 }}>
           {challan.isEditing ? 'Update DC' : 'Save DC'}
         </button>
-        <button type="button" onClick={() => setShowForm(false)} style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Cancel</button>
+        <button type="button" onClick={() => setShowForm(false)} style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer', marginRight: 16 }}>Cancel</button>
+        <button type="button" onClick={() => setShowPreview(true)} style={{ fontSize: 18, background: '#3182ce', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Preview</button>
       </div>
     </div>
   );
