@@ -85,36 +85,18 @@ process.on('uncaughtException', (err) => {
 db.serialize(() => {
   // Create all tables if they don't exist
 
-  // Price Comparison items table
-  db.run(`CREATE TABLE IF NOT EXISTS price_comparision_items (
+  // Price Comparison table
+  db.run(`CREATE TABLE IF NOT EXISTS price_comparision (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // Price Comparison vendors table
-  db.run(`CREATE TABLE IF NOT EXISTS price_comparision_vendors (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    communication TEXT,
-    contact_info TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // Price Comparison vendors table
-  db.run(`CREATE TABLE IF NOT EXISTS price_comparision_quotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id INTEGER,
-    vendor_id INTEGER,
-    price REAL,
-    quoted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    remarks TEXT
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    vendors TEXT,
+    items TEXT,
+    selected TEXT
   )`);
 
   // Purchases table
   db.run(`CREATE TABLE IF NOT EXISTS purchases (
-    slNo INTEGER,
+    slNo TEXT,
     date TEXT,
     description TEXT,
     credit REAL DEFAULT NULL,
@@ -147,9 +129,9 @@ db.serialize(() => {
     ewayBillRef TEXT DEFAULT '',
     invoiceTotal REAL,
     totalNet REAL DEFAULT 0,
-    cgst REAL DEFAULT 0,
-    sgst REAL DEFAULT 0,
-    igst REAL DEFAULT 0,
+    veshadCgst REAL DEFAULT 0,
+    veshadSgst REAL DEFAULT 0,
+    veshadIgst REAL DEFAULT 0,
     grandTotal REAL DEFAULT 0,
     amountInWords TEXT DEFAULT "",
     paymentReceived REAL DEFAULT 0,
@@ -158,7 +140,9 @@ db.serialize(() => {
     paymentDate TEXT DEFAULT "",
     balanceDue REAL DEFAULT 0,
     paymentStatus TEXT DEFAULT "Pending",
-    notes TEXT DEFAULT ""
+    notes TEXT DEFAULT "",
+    vendor_id INTEGER,
+    profitPercent REAL DEFAULT 0
   )`);
 
   // Invoice items table
@@ -174,19 +158,35 @@ db.serialize(() => {
 
   // Vendors invoices table
   db.run(`CREATE TABLE IF NOT EXISTS vendors_invoices (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vendorName TEXT,
-    itemName TEXT,
+    vinvoice_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT DEFAULT (date('now')),
+    vendor_id INTEGER REFERENCES vendor_names(vendor_id),
+    total_quantity INTEGER DEFAULT 0,
     totalInvoiceValue REAL DEFAULT 0,
     cgst REAL DEFAULT 0,
     sgst REAL DEFAULT 0,
     igst REAL DEFAULT 0,
     paymentStatus TEXT DEFAULT 'Pending',
-    veshadInvoiceRefNo TEXT,
-    veshadInvoiceValue REAL DEFAULT 0,
-    veshadSgst REAL DEFAULT 0,
-    veshadCgst REAL DEFAULT 0,
-    veshadIgst REAL DEFAULT 0
+    veshadInvoiceRefNo TEXT
+  )`);
+
+  // Vendors names table
+  db.run(`CREATE TABLE IF NOT EXISTS vendor_names (
+    vendor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT DEFAULT (date('now')),
+    vendorName TEXT,
+    contactDetails TEXT DEFAULT ''
+  )`);
+
+  // Vendors items table
+  db.run(`CREATE TABLE IF NOT EXISTS vendor_items (
+    vitem_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    itemName TEXT,
+    pricePerUnit REAL DEFAULT 0,
+    quantity INTEGER DEFAULT 0,
+    total REAL DEFAULT 0,
+    vendor_id TEXT REFERENCES vendor_names(vendor_id),
+    vinvoice_id INTEGER REFERENCES vendors_invoices(vinvoice_id)
   )`);
 
   // Status entries table
@@ -242,15 +242,19 @@ db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
   FOREIGN KEY (challanNo) REFERENCES delivery_challans(challanNo)
 )`);
 
+  // Company letters table
+  db.run(`CREATE TABLE IF NOT EXISTS company_letters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT,
+    subject TEXT,
+    body TEXT
+  )`);
+
   // Letter table
   db.run(`CREATE TABLE IF NOT EXISTS letter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
-    "to" TEXT,
-    subject TEXT,
-    body TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    body TEXT
   )`);
 });
 
@@ -272,199 +276,6 @@ app.post("/api/upload-excel", upload.single("file"), (req, res) => {
     res.status(500).json({ error: "Failed to process Excel file" });
   }
 });
-
-// --- GET all price comparison data ---
-app.get("/api/price-comparison", (req, res) => {
-  // Get all items and all vendors
-  db.all("SELECT * FROM price_comparision_items", [], (err, items) => {
-    if (err) {
-      console.error("Error fetching items:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    db.all("SELECT * FROM price_comparision_vendors", [], (err, vendors) => {
-      if (err) {
-        console.error("Error fetching vendors:", err);
-        return res.status(500).json({ error: err.message });
-      }
-      db.all(
-        "SELECT * FROM price_comparision_quotes",
-        [],
-        (err, quotes) => {
-          if (err) {
-            console.error("Error fetching quotes:", err);
-            return res.status(500).json({ error: err.message });
-          }
-          // Build a matrix: each item, each vendor, with price if exists
-          const vendorMap = {};
-          vendors.forEach(v => { vendorMap[v.id] = v; });
-          const itemMap = {};
-          items.forEach(i => { itemMap[i.id] = i; });
-
-          // Build a lookup for quotes: {item_id}-{vendor_id} => quote
-          const quoteMap = {};
-          quotes.forEach(q => {
-            quoteMap[`${q.item_id}-${q.vendor_id}`] = q;
-          });
-
-          // Build result: array of items, each with prices array (ordered as vendors)
-          const result = items.map(item => {
-            const prices = vendors.map(vendor => {
-              const quote = quoteMap[`${item.id}-${vendor.id}`];
-              return quote ? String(quote.price) : "";
-            });
-            return {
-              id: item.id,
-              name: item.name,
-              description: item.description,
-              prices
-            };
-          });
-
-          res.json({
-            vendors: vendors.map(v => ({
-              id: v.id,
-              name: v.name,
-              communication: v.communication,
-              contact_info: v.contact_info
-            })),
-            items: result
-          });
-        }
-      );
-    });
-  });
-});
-
-
-//POST endpoint for price-comparison-quotes
-// Save the entire price comparison table (vendors, items, and quotes)
-app.post("/api/price-comparison/quotes", (req, res) => {
-  const { priceEntries } = req.body;
-  if (!Array.isArray(priceEntries)) {
-    return res.status(400).json({ success: false, error: "Invalid payload" });
-  }
-
-  // First, delete all existing quotes
-  db.run("DELETE FROM price_comparision_quotes", [], function (delErr) {
-    if (delErr) {
-      return res.status(500).json({ success: false, error: "Failed to clear existing quotes" });
-    }
-
-    let completed = 0;
-    let errors = [];
-    if (priceEntries.length === 0) {
-      return res.json({ success: true, errors: [] });
-    }
-
-    priceEntries.forEach(entry => {
-      const { itemName, vendorName, price, quotedDate } = entry;
-      if (!itemName || !vendorName || price === undefined) {
-        errors.push(`Missing data for entry: ${JSON.stringify(entry)}`);
-        completed++;
-        if (completed === priceEntries.length) {
-          return res.json({ success: errors.length === 0, errors });
-        }
-        return;
-      }
-
-      // Lookup item_id
-      db.get(
-        "SELECT id FROM price_comparision_items WHERE name = ?",
-        [itemName],
-        (err, itemRow) => {
-          if (err || !itemRow) {
-            errors.push(`Item not found: ${itemName}`);
-            completed++;
-            if (completed === priceEntries.length) {
-              return res.json({ success: errors.length === 0, errors });
-            }
-            return;
-          }
-          // Lookup vendor_id
-          db.get(
-            "SELECT id FROM price_comparision_vendors WHERE name = ?",
-            [vendorName],
-            (err, vendorRow) => {
-              if (err || !vendorRow) {
-                errors.push(`Vendor not found: ${vendorName}`);
-                completed++;
-                if (completed === priceEntries.length) {
-                  return res.json({ success: errors.length === 0, errors });
-                }
-                return;
-              }
-              // Insert quote
-              db.run(
-                `INSERT INTO price_comparision_quotes (item_id, vendor_id, price, quoted_date) VALUES (?, ?, ?, ?)`,
-                [itemRow.id, vendorRow.id, price, quotedDate || null],
-                function (err) {
-                  if (err) {
-                    errors.push(`Insert error for ${itemName}/${vendorName}: ${err.message}`);
-                  }
-                  completed++;
-                  if (completed === priceEntries.length) {
-                    return res.json({ success: errors.length === 0, errors });
-                  }
-                }
-              );
-            }
-          );
-        }
-      );
-    });
-  });
-});
-
-//Add price-comparison-items
-app.post("/api/price-comparison/items", (req, res) => {
-  const { name, description } = req.body;
-  db.run(
-    `INSERT INTO price_comparision_items (name, description) VALUES (?, ?)`,
-    [name, description],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, name, description });
-    }
-  );
-});
-
-//Add price-comparison-vendors
-app.post("/api/price-comparison/vendors", (req, res) => {
-  const { name, communication, contact_info } = req.body;
-  db.run(
-    `INSERT INTO price_comparision_vendors (name, communication, contact_info) VALUES (?, ?, ?)`,
-    [name, communication, contact_info],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, name, communication, contact_info });
-    }
-  );
-});
-
-//updated quotes
-app.put("/api/price-comparison/quotes/:id", (req, res) => {
-  const { id } = req.params;
-  const { price, name, quoted_date, remarks } = req.body;
-
-  db.run(
-    `UPDATE price_comparision_quotes SET price = ?, quoted_date = ?, remarks = ? WHERE id = ?`,
-    [price, name, quoted_date, remarks, id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ updated: this.changes });
-    }
-  );
-});
-
-//Delete quotes
-app.delete("/api/price-comparison/quotes/:id", (req, res) => {
-  const { id } = req.params;
-  db.run(`DELETE FROM price_comparision_quotes WHERE id = ?`, [id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ deleted: this.changes });
-  });
-});
-
 
 // Dashboard Routes
 app.get("/api/dashboard", (req, res) => {
@@ -540,9 +351,9 @@ app.get("/api/gst-collected", (req, res) => {
   
   db.get(
     `SELECT 
-      IFNULL(SUM(cgst), 0) as cgst, 
-      IFNULL(SUM(sgst), 0) as sgst, 
-      IFNULL(SUM(igst), 0) as igst 
+      IFNULL(SUM(veshadCgst), 0) as veshadCgst, 
+      IFNULL(SUM(veshadSgst), 0) as veshadSgst, 
+      IFNULL(SUM(veshadIgst), 0) as veshadIgst 
     FROM invoices 
     WHERE date(date) >= date(?) AND date(date) <= date(?)`,
     [startDate, endDate],
@@ -573,9 +384,9 @@ app.get("/api/gst-collected-fy", (req, res) => {
 
   db.get(
     `SELECT 
-      IFNULL(SUM(cgst), 0) as cgst, 
-      IFNULL(SUM(sgst), 0) as sgst, 
-      IFNULL(SUM(igst), 0) as igst 
+      IFNULL(SUM(veshadCgst), 0) as veshadCgst, 
+      IFNULL(SUM(veshadSgst), 0) as veshadSgst, 
+      IFNULL(SUM(veshadIgst), 0) as veshadIgst 
     FROM invoices 
     WHERE date(date) >= date(?) AND date(date) <= date(?)`,
     [fyStart, fyEnd],
@@ -627,18 +438,9 @@ app.get("/api/delivery-challans/:challanNo", (req, res) => {
     if (!row) {
       return res.status(404).json({ error: 'Delivery challan not found' });
     }
-    // Fetch all items for this challanNo from delivery_items
-    db.all("SELECT * FROM delivery_items WHERE challanNo = ?", [req.params.challanNo], (itemErr, items) => {
-      if (itemErr) {
-        console.error("Error fetching delivery items:", itemErr);
-        return res.status(500).json({
-          error: 'Failed to fetch delivery items',
-          details: itemErr.message
-        });
-      }
-      row.items = items || [];
-      res.json(row);
-    });
+    // Parse the JSON items string if present
+    row.items = row.items ? JSON.parse(row.items) : [];
+    res.json(row);
   });
 });
 
@@ -740,7 +542,8 @@ app.put("/api/delivery-challans/:challanNo", (req, res) => {
       dispatch_date = ?,
       bill_to_address = ?,
       eway_bill_no = ?,
-      invoiceNumber = ?
+      invoiceNumber = ?,
+      updatedAt = CURRENT_TIMESTAMP
     WHERE challanNo = ?
   `;
 
@@ -871,22 +674,8 @@ const validatePurchaseData = (data) => {
   return errors;
 };
 
-function parseCurrency(value) {
-  if (value === null || value === undefined) return 0;
-
-  if (typeof value === "number") return value;
-
-  if (typeof value === "string") {
-    const cleaned = value.replace(/[^0-9.-]/g, ""); // remove ₹, commas, etc.
-    const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-
-  return 0;
-}
-
-
-// Purchases Routes
+// 
+//  Routes
 app.get("/api/purchases", async (req, res) => {
   console.log('Fetching all purchases...');
   
@@ -938,8 +727,8 @@ app.get("/api/purchases", async (req, res) => {
 
           const formattedRows = rows.map(row => ({
             ...row,
-            credit: parseCurrency(row.credit),
-            debit: parseCurrency(row.debit),
+            credit: row.credit === null ? null : Number(row.credit),
+            debit: row.debit === null ? null : Number(row.debit),
             date: row.date || null,
             slNo: row.slNo || '',
             description: row.description || '',
@@ -1040,17 +829,17 @@ app.put("/api/purchases/:id", (req, res) => {
 
   const query = `
     UPDATE purchases SET
-      slNo = ?, date = ?, description = ?,
+      date = ?, description = ?,
       credit = ?, debit = ?, bankPaymentRef = ?,
       clientName = ?, paymentRemarks = ?,
-      refBankName = ?, invoiceNo = ?
+      refBankName = ?, invoiceNo = ?,
+      inputCgst = ?, inputSgst = ?, inputIgst = ?
     WHERE slNo = ?
   `;
 
   db.run(
     query,
     [
-      purchaseData.slNo,
       purchaseData.date,
       purchaseData.description,
       purchaseData.credit,
@@ -1060,7 +849,10 @@ app.put("/api/purchases/:id", (req, res) => {
       purchaseData.paymentRemarks || '',
       purchaseData.refBankName || '',
       purchaseData.invoiceNo || '',
-      id
+      purchaseData.inputCgst || 0,
+      purchaseData.inputSgst || 0,
+      purchaseData.inputIgst || 0,
+      purchaseData.slNo,
     ],
     function(err) {
       if (err) {
@@ -1176,15 +968,17 @@ app.put("/api/invoices/:invoiceNumber", (req, res) => {
   if (req.body.invoiceNumber && req.body.invoiceNumber !== invoiceNumber) {
     return res.status(400).json({ error: "Cannot change invoiceNumber." });
   }
-  const { date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
-     deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, cgst, sgst, igst, grandTotal, amountInWords, paymentDate,
-     paymentBank, balanceDue, paymentStatus, items } = req.body;
+  const { date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode,
+    deliveryAddress_state, deliveryDate, deliveryChallanRef, hsnSac, poRefNo, ewayBillRef, invoiceTotal, totalNet, veshadCgst, veshadSgst,
+    veshadIgst, grandTotal, amountInWords, paymentReceived, paymentBank, paymentBankRef, paymentDate, balanceDue, paymentStatus, notes,
+    vendor_id, profitPercent, items } = req.body;
 
   db.run(
-    "UPDATE invoices SET date = ?, revision = ?, deliveryAddress_name = ?, deliveryAddress_address = ?, deliveryAddress_city = ?, deliveryAddress_postalCode = ?, deliveryAddress_state = ?,deliveryDate = ?, deliveryChallanRef = ?, hsnSac = ?, poRefNo = ?, paymentReceived = ?, totalNet = ?, cgst = ?, sgst = ?, igst = ?, grandTotal = ?, amountInWords = ?, paymentDate = ?, paymentBank = ?, balanceDue = ?, paymentStatus = ? WHERE invoiceNumber = ?",
-    [date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
-     deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, cgst, sgst, igst, grandTotal, amountInWords, paymentDate,
-     paymentBank, balanceDue, paymentStatus, invoiceNumber],
+    "UPDATE invoices SET date=?, revision=?, deliveryAddress_name=?, deliveryAddress_address=?, deliveryAddress_city=?, deliveryAddress_postalCode=?, deliveryAddress_state=?, deliveryDate=?, deliveryChallanRef=?, hsnSac=?, poRefNo=?, ewayBillRef=?, invoiceTotal=?, totalNet=?, veshadCgst=?, veshadSgst=?, veshadIgst=?, grandTotal=?, amountInWords=?, paymentReceived=?, paymentBank=?, paymentBankRef=?, paymentDate=?, balanceDue=?, paymentStatus=?, notes=?, vendor_id=?, profitPercent=? WHERE invoiceNumber = ?",
+    [date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode,
+    deliveryAddress_state, deliveryDate, deliveryChallanRef, hsnSac, poRefNo, ewayBillRef, invoiceTotal, totalNet, veshadCgst, veshadSgst,
+    veshadIgst, grandTotal, amountInWords, paymentReceived, paymentBank, paymentBankRef, paymentDate, balanceDue, paymentStatus, notes,
+    vendor_id, profitPercent, invoiceNumber],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: "Invoice not found" });
@@ -1268,81 +1062,516 @@ app.get("/api/dashboard", (req, res) => {
     });
   });
 });
-app.post("/api/purchases/import", purchaseUpload.single("file"), async (req, res) => {
+
+
+app.post("/api/purchases/import", upload.single('file'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
+    return res.status(400).json({ 
+      error: 'No file uploaded',
+      details: 'Please select an Excel file to upload'
+    });
   }
+
   try {
+    console.log('Processing uploaded file:', req.file.originalname);
+    
+    // Read the Excel file
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: "", raw: false });
-    if (!Array.isArray(jsonData) || jsonData.length === 0) {
-      return res.status(400).json({ error: "No valid data found" });
-    }
-    // Insert each row into purchases table
-    let inserted = 0;
-    for (const row of jsonData) {
-      // Skip rows that are completely empty (all main fields are empty)
-      if (
-        (!row["Sl No"] || row["Sl No"].toString().trim() === "") &&
-        (!row["Date"] || row["Date"].toString().trim() === "") &&
-        (!row["Description"] || row["Description"].toString().trim() === "") &&
-        (!row["Credit"] || row["Credit"].toString().trim() === "") &&
-        (!row["Debit"] || row["Debit"].toString().trim() === "") &&
-        (!row["Bank Payment Ref"] || row["Bank Payment Ref"].toString().trim() === "") &&
-        (!row["Clients Name"] || row["Clients Name"].toString().trim() === "") &&
-        (!row["Payment Remarks"] || row["Payment Remarks"].toString().trim() === "") &&
-        (!row["Ref Bank Name"] || row["Ref Bank Name"].toString().trim() === "") &&
-        (!row["Invoice No"] || row["Invoice No"].toString().trim() === "") &&
-        (!row["Input CGST"] || row["Input CGST"].toString().trim() === "") &&
-        (!row["Input SGST"] || row["Input SGST"].toString().trim() === "") &&
-        (!row["Input IGST"] || row["Input IGST"].toString().trim() === "")
-      ) {
-        continue; // skip this row
-      }
-      // Map Excel columns to DB columns explicitly
-      const values = [
-        row["Sl No"] ?? "",
-        row["Date"] ?? "",
-        row["Description"] ?? "",
-        row["Credit"] ?? null,
-        row["Debit"] ?? null,
-        (row["Bank Payment Ref"] === null || row["Bank Payment Ref"] === undefined) ? "" : row["Bank Payment Ref"],
-        row["Clients Name"] ?? "",
-        row["Payment Remarks"] ?? "",
-        row["Ref Bank Name"] ?? "",
-        row["Invoice No"] ?? "",
-        row["Input CGST"] ?? 0,
-        row["Input SGST"] ?? 0,
-        row["Input IGST"] ?? 0
-      ];
-      await new Promise((resolve, reject) => {
-        db.run(
-          `INSERT INTO purchases (slNo, date, description, credit, debit, bankPaymentRef, clientName, paymentRemarks, refBankName, invoiceNo, inputCgst, inputSgst, inputIgst) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          values,
-          function (err) {
-            if (err) reject(err);
-            else { inserted++; resolve(); }
-          }
-        );
+    
+    // Convert to JSON with proper headers
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, { 
+      header: 1,
+      defval: null
+    });
+
+    if (jsonData.length === 0) {
+      return res.status(400).json({ 
+        error: 'Empty file',
+        details: 'The uploaded Excel file appears to be empty'
       });
     }
-    // Return all purchases
-    db.all("SELECT * FROM purchases", (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ rows, inserted });
+
+    // Assume first row contains headers
+    const headers = jsonData[0];
+    const dataRows = jsonData.slice(1);
+
+    console.log('Headers found:', headers);
+    console.log(`Processing ${dataRows.length} data rows`);
+
+    // Map headers to database columns (flexible mapping)
+    const columnMapping = {
+      'slNo': ['slno', 'sl no', 'serial no', 'sno', 'sr no', 'serial', 'sl.no', 's.no'],
+      'date': ['date', 'transaction date', 'trans date', 'txn date', 'tran date'],
+      'description': ['description', 'details', 'particulars', 'narration', 'desc', 'transaction details'],
+      'credit': ['credit', 'credit amount', 'cr', 'deposit', 'cr amt', 'credit amt'],
+      'debit': ['debit', 'debit amount', 'dr', 'withdrawal', 'dr amt', 'debit amt'],
+      'bankPaymentRef': ['bank payment ref', 'payment ref', 'ref no', 'reference', 'ref', 'payment reference', 'bank ref'],
+      'clientName': ['client name', 'customer name', 'party name', 'client', 'customer', 'party'],
+      'paymentRemarks': ['payment remarks', 'remarks', 'notes', 'comments', 'remark'],
+      'refBankName': ['ref bank name', 'bank name', 'bank', 'ref bank', 'Ref Bank Name'],
+      'invoiceNo': ['invoice no', 'invoice number', 'inv no', 'invoice', 'inv'],
+      'inputCgst': ['input cgst', 'cgst', 'cgst amount', 'cgst amt', 'i cgst'],
+      'inputSgst': ['input sgst', 'sgst', 'sgst amount', 'sgst amt', 'i sgst'],
+      'inputIgst': ['input igst', 'igst', 'igst amount', 'igst amt', 'i igst']
+    };
+
+    // Find column indices
+    const columnIndices = {};
+    for (const [dbColumn, possibleNames] of Object.entries(columnMapping)) {
+      const headerIndex = headers.findIndex(header => 
+        possibleNames.some(name => 
+          header && header.toString().toLowerCase().includes(name.toLowerCase())
+        )
+      );
+      if (headerIndex !== -1) {
+        columnIndices[dbColumn] = headerIndex;
+      }
+    }
+
+    console.log('Column mapping:', columnIndices);
+
+    const validRows = [];
+    const errors = [];
+
+    // Process each data row
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const rowNum = i + 2; // +2 because we skip header and Excel is 1-indexed
+
+      try {
+        // Skip empty rows - check if all cells are empty/null/undefined
+        if (!row || row.every(cell => cell === null || cell === undefined || cell === '' || cell === 0)) {
+          continue;
+        }
+
+        // Clean and parse credit value
+        let rawCredit = columnIndices.credit !== undefined ? row[columnIndices.credit] : null;
+        let creditValue = null;
+        if (rawCredit !== null && rawCredit !== undefined && rawCredit !== '') {
+          // Remove commas, currency symbols, and trim
+          const cleaned = rawCredit.toString().replace(/[^0-9.\-]/g, '').trim();
+          creditValue = cleaned ? parseFloat(cleaned) : null;
+          if (isNaN(creditValue)) {
+            console.warn(`Row ${rowNum}: Could not parse credit value:`, rawCredit);
+            creditValue = null;
+          }
+        }
+        // Clean and parse debit value
+        let rawDebit = columnIndices.debit !== undefined ? row[columnIndices.debit] : null;
+        let debitValue = null;
+        if (rawDebit !== null && rawDebit !== undefined && rawDebit !== '') {
+          const cleaned = rawDebit.toString().replace(/[^0-9.\-]/g, '').trim();
+          debitValue = cleaned ? parseFloat(cleaned) : null;
+          if (isNaN(debitValue)) {
+            console.warn(`Row ${rowNum}: Could not parse debit value:`, rawDebit);
+            debitValue = null;
+          }
+        }
+        const purchase = {
+          slNo: columnIndices.slNo !== undefined ? (row[columnIndices.slNo] || '').toString().trim() : '',
+          date: columnIndices.date !== undefined ? row[columnIndices.date] : '',
+          description: columnIndices.description !== undefined ? (row[columnIndices.description] || '').toString().trim() : '',
+          credit: creditValue,
+          debit: debitValue,
+          bankPaymentRef: columnIndices.bankPaymentRef !== undefined ? (row[columnIndices.bankPaymentRef] || '').toString().trim() : '',
+          clientName: columnIndices.clientName !== undefined ? (row[columnIndices.clientName] || '').toString().trim() : '',
+          paymentRemarks: columnIndices.paymentRemarks !== undefined ? (row[columnIndices.paymentRemarks] || '').toString().trim() : '',
+          refBankName: columnIndices.refBankName !== undefined ? (row[columnIndices.refBankName] || '').toString().trim() : '',
+          invoiceNo: columnIndices.invoiceNo !== undefined ? (row[columnIndices.invoiceNo] || '').toString().trim() : '',
+          inputCgst: columnIndices.inputCgst !== undefined ? parseFloat(row[columnIndices.inputCgst]) || 0 : 0,
+          inputSgst: columnIndices.inputSgst !== undefined ? parseFloat(row[columnIndices.inputSgst]) || 0 : 0,
+          inputIgst: columnIndices.inputIgst !== undefined ? parseFloat(row[columnIndices.inputIgst]) || 0 : 0
+        };
+
+        // Convert Excel date if needed
+        if (purchase.date && typeof purchase.date === 'number') {
+          const excelDate = new Date((purchase.date - 25569) * 86400 * 1000);
+          purchase.date = excelDate.toISOString().split('T')[0];
+        } else if (purchase.date) {
+          // Try to parse various date formats
+          const dateObj = new Date(purchase.date);
+          if (!isNaN(dateObj.getTime())) {
+            purchase.date = dateObj.toISOString().split('T')[0];
+          }
+        }
+
+        // More flexible validation - check if row has meaningful transaction data
+        const hasTransactionData = purchase.credit || purchase.debit || purchase.description || purchase.bankPaymentRef || purchase.clientName;
+        
+        if (!hasTransactionData) {
+          // Skip completely empty rows without generating errors
+          console.log(`Skipping empty row ${rowNum}: No meaningful transaction data`);
+          continue;
+        }
+
+        console.log(`Processing row ${rowNum}:`, {
+          slNo: purchase.slNo,
+          date: purchase.date,
+          description: purchase.description?.substring(0, 30) + '...',
+          credit: purchase.credit,
+          debit: purchase.debit
+        });
+
+        validRows.push(purchase);
+      } catch (error) {
+        errors.push(`Row ${rowNum}: ${error.message}`);
+      }
+    }
+
+    console.log(`Processed ${validRows.length} valid rows, ${errors.length} errors`);
+
+    if (validRows.length === 0) {
+      return res.status(400).json({
+        error: 'No valid data found',
+        details: errors.length > 0 ? errors : ['No valid purchase data found in the file']
+      });
+    }
+
+    // Insert valid rows into database, skipping duplicates (by slNo, date, description)
+    const insertQuery = `
+      INSERT INTO purchases (
+        slNo, date, description, credit, debit,
+        bankPaymentRef, clientName, paymentRemarks,
+        refBankName, invoiceNo, inputCgst, inputSgst, inputIgst
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    let insertedCount = 0;
+    const insertErrors = [];
+
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+
+      let processed = 0;
+      for (let i = 0; i < validRows.length; i++) {
+        const purchase = validRows[i];
+        // Check for duplicate by slNo, date, and description
+        db.get(
+          `SELECT slNo, date, description FROM purchases WHERE slNo = ? AND date = ? AND description = ?`,
+          [purchase.slNo, purchase.date, purchase.description],
+          (err, row) => {
+            if (err) {
+              insertErrors.push(`Failed to check duplicate for row ${i + 1}: ${err.message}`);
+              processed++;
+              if (processed === validRows.length) {
+                finalizeImport();
+              }
+              return;
+            }
+            if (row) {
+              // Duplicate found, skip insert
+              processed++;
+              if (processed === validRows.length) {
+                finalizeImport();
+              }
+              return;
+            }
+            // No duplicate, insert
+            db.run(
+              insertQuery,
+              [
+                purchase.slNo,
+                purchase.date,
+                purchase.description,
+                purchase.credit,
+                purchase.debit,
+                purchase.bankPaymentRef,
+                purchase.clientName,
+                purchase.paymentRemarks,
+                purchase.refBankName,
+                purchase.invoiceNo,
+                purchase.inputCgst,
+                purchase.inputSgst,
+                purchase.inputIgst
+              ],
+              (err) => {
+                if (err) {
+                  insertErrors.push(`Failed to insert row ${i + 1}: ${err.message}`);
+                } else {
+                  insertedCount++;
+                }
+                processed++;
+                if (processed === validRows.length) {
+                  finalizeImport();
+                }
+              }
+            );
+          }
+        );
+      }
+
+      function finalizeImport() {
+        if (insertErrors.length > 0) {
+          db.run("ROLLBACK", (rollbackErr) => {
+            res.status(500).json({
+              error: 'Failed to import data',
+              details: insertErrors,
+              inserted: insertedCount,
+              total: validRows.length
+            });
+          });
+        } else {
+          db.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              res.status(500).json({
+                error: 'Failed to commit transaction',
+                details: commitErr.message
+              });
+            } else {
+              res.json({
+                message: 'Import completed successfully',
+                inserted: insertedCount,
+                total: validRows.length,
+                errors: errors.length > 0 ? errors : undefined
+              });
+            }
+          });
+        }
+      }
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+  } catch (error) {
+    console.error('Error processing upload:', error);
+    res.status(500).json({
+      error: 'Failed to process uploaded file',
+      details: error.message
+    });
+  } finally {
+    // Clean up uploaded file
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
   }
+});
+
+// Create new invoice
+app.post("/api/invoices", (req, res) => {
+  console.log('Creating new invoice with data:', JSON.stringify(req.body, null, 2));
+  
+  const {
+    invoiceNumber, date, revision, deliveryAddress_name, deliveryAddress_address, 
+    deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
+    deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, 
+    cgst, sgst, igst, grandTotal, amountInWords, paymentDate, paymentBank, 
+    balanceDue, paymentStatus, ewayBillRef, items, notes,
+    manualEntryLabel, manualEntryAmount, manualEntrySign
+  } = req.body;
+
+  // Basic validation
+  if (!invoiceNumber || !date || !grandTotal) {
+    return res.status(400).json({ 
+      error: "Missing required fields",
+      details: "Invoice number, date, and grand total are required"
+    });
+  }
+
+  // Check if invoice number already exists
+  db.get("SELECT invoiceNumber FROM invoices WHERE invoiceNumber = ?", [invoiceNumber], (err, existingInvoice) => {
+    if (err) {
+      console.error("Error checking existing invoice:", err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (existingInvoice) {
+      return res.status(409).json({ 
+        error: "Invoice already exists",
+        details: `Invoice with number ${invoiceNumber} already exists`
+      });
+    }
+
+    // Insert the invoice - only using columns that exist in the table
+    const insertInvoiceQuery = `
+      INSERT INTO invoices (
+        invoiceNumber, date, revision, deliveryAddress_name, deliveryAddress_address, 
+        deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
+        deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, 
+        cgst, sgst, igst, grandTotal, amountInWords, paymentDate, paymentBank, 
+        balanceDue, paymentStatus, ewayBillRef, notes,
+        manualEntryLabel, manualEntryAmount, manualEntrySign
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.run(
+      insertInvoiceQuery,
+      [
+        invoiceNumber, date, revision || 1, deliveryAddress_name || '', 
+        deliveryAddress_address || '', deliveryAddress_city || '', 
+        deliveryAddress_postalCode || '', deliveryAddress_state || '',
+        deliveryDate || '', deliveryChallanRef || '', hsnSac || '', poRefNo || '', 
+        paymentReceived || 0, totalNet || 0, cgst || 0, sgst || 0, igst || 0, 
+        grandTotal, amountInWords || '', paymentDate || '', paymentBank || '', 
+        balanceDue || grandTotal, paymentStatus || 'Pending', ewayBillRef || '',
+        notes || '',
+        manualEntryLabel || '', manualEntryAmount || 0, manualEntrySign || 1
+      ],
+      function (err) {
+        if (err) {
+          console.error("Error inserting invoice:", err);
+          return res.status(500).json({ 
+            error: "Failed to create invoice",
+            details: err.message 
+          });
+        }
+
+        console.log(`Invoice ${invoiceNumber} created successfully`);
+
+        // Insert invoice items if provided
+        if (Array.isArray(items) && items.length > 0) {
+          const stmt = db.prepare(
+            "INSERT INTO invoice_items (invoiceNumber, item_description, quantity, unitPrice, total) VALUES (?, ?, ?, ?, ?)"
+          );
+          
+          let itemErrors = [];
+          let itemsProcessed = 0;
+
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            stmt.run(
+              invoiceNumber, 
+              item.item_description || '', 
+              item.quantity || 0, 
+              item.unitPrice || 0, 
+              item.total || 0,
+              function(err) {
+                itemsProcessed++;
+                if (err) {
+                  console.error(`Error inserting item ${i + 1}:`, err);
+                  itemErrors.push(`Item ${i + 1}: ${err.message}`);
+                }
+
+                // Check if all items have been processed
+                if (itemsProcessed === items.length) {
+                  stmt.finalize((finalizeErr) => {
+                    if (finalizeErr) {
+                      console.error("Error finalizing statement:", finalizeErr);
+                    }
+
+                    if (itemErrors.length > 0) {
+                      return res.status(500).json({
+                        error: "Invoice created but some items failed to save",
+                        details: itemErrors,
+                        invoiceNumber: invoiceNumber
+                      });
+                    }
+
+                    res.status(201).json({
+                      success: true,
+                      message: "Invoice created successfully",
+                      invoiceNumber: invoiceNumber,
+                      itemsCount: items.length
+                    });
+                  });
+                }
+              }
+            );
+          }
+        } else {
+          // No items to insert
+          res.status(201).json({
+            success: true,
+            message: "Invoice created successfully",
+            invoiceNumber: invoiceNumber,
+            itemsCount: 0
+          });
+        }
+      }
+    );
+  });
+});
+
+// Bulk save purchases
+app.post("/api/purchases/bulk-save", async (req, res) => {
+  const purchases = req.body.purchases;
+  if (!Array.isArray(purchases) || purchases.length === 0) {
+    return res.status(400).json({ error: "No purchases provided" });
+  }
+  const insertQuery = `
+    INSERT INTO purchases (
+      slNo, date, description, credit, debit,
+      bankPaymentRef, clientName, paymentRemarks,
+      refBankName, invoiceNo, inputCgst, inputSgst, inputIgst
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  const updateQuery = `
+    UPDATE purchases SET
+      credit = ?, debit = ?, bankPaymentRef = ?, clientName = ?, paymentRemarks = ?,
+      refBankName = ?, invoiceNo = ?, inputCgst = ?, inputSgst = ?, inputIgst = ?
+    WHERE slNo = ? AND date = ? AND description = ?
+  `;
+  let insertedCount = 0;
+  let updatedCount = 0;
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+    for (const purchase of purchases) {
+      db.get(
+        "SELECT id FROM purchases WHERE slNo = ? AND date = ? AND description = ?",
+        [purchase.slNo, purchase.date, purchase.description],
+        (err, row) => {
+          if (row) {
+            db.run(
+              updateQuery,
+              [
+                purchase.credit,
+                purchase.debit,
+                purchase.bankPaymentRef,
+                purchase.clientName,
+                purchase.paymentRemarks,
+                purchase.refBankName,
+                purchase.invoiceNo,
+                purchase.inputCgst,
+                purchase.inputSgst,
+                purchase.inputIgst,
+                purchase.slNo,
+                purchase.date,
+                purchase.description
+              ],
+              function (err) {
+                if (!err) updatedCount++;
+              }
+            );
+          } else {
+            db.run(
+              insertQuery,
+              [
+                purchase.slNo,
+                purchase.date,
+                purchase.description,
+                purchase.credit,
+                purchase.debit,
+                purchase.bankPaymentRef,
+                purchase.clientName,
+                purchase.paymentRemarks,
+                purchase.refBankName,
+                purchase.invoiceNo,
+                purchase.inputCgst,
+                purchase.inputSgst,
+                purchase.inputIgst
+              ],
+              function (err) {
+                if (!err) insertedCount++;
+              }
+            );
+          }
+        }
+      );
+    }
+    db.run("COMMIT", () => {
+      res.json({ success: true, insertedCount, updatedCount });
+    });
+  });
 });
 
 // --- Vendors Invoices API ---
 
 // Get all vendor invoices
 app.get("/api/vendors-invoices", (req, res) => {
-  db.all("SELECT * FROM vendors_invoices ORDER BY id DESC", [], (err, rows) => {
+  db.all("SELECT * FROM vendors_invoices ORDER BY vinvoice_id DESC", [], (err, rows) => {
     if (err) {
       console.error("Error fetching vendor invoices:", err);
       return res.status(500).json({ error: "Failed to fetch vendor invoices" });
@@ -1354,13 +1583,12 @@ app.get("/api/vendors-invoices", (req, res) => {
 // Add a new vendor invoice
 app.post("/api/vendors-invoices", (req, res) => {
   const {
-    vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus,
-    veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst
+    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo
   } = req.body;
   db.run(
-    `INSERT INTO vendors_invoices (vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst],
+    `INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo],
     function (err) {
       if (err) {
         console.error("Error adding vendor invoice:", err);
@@ -1375,12 +1603,11 @@ app.post("/api/vendors-invoices", (req, res) => {
 app.put("/api/vendors-invoices/:id", (req, res) => {
   const { id } = req.params;
   const {
-    vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus,
-    veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst
+    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo
   } = req.body;
   db.run(
-    `UPDATE vendors_invoices SET vendorName=?, itemName=?, totalInvoiceValue=?, cgst=?, sgst=?, igst=?, paymentStatus=?, veshadInvoiceRefNo=?, veshadInvoiceValue=?, veshadSgst=?, veshadCgst=?, veshadIgst=? WHERE id=?`,
-    [vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst, id],
+    `UPDATE vendors_invoices SET date=?, vendor_id=?, total_quantity=?, totalInvoiceValue=?, cgst=?, sgst=?, igst=?, paymentStatus=?, veshadInvoiceRefNo=? WHERE vinvoice_id=?`,
+    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, id],
     function (err) {
       if (err) {
         console.error("Error updating vendor invoice:", err);
@@ -1398,7 +1625,7 @@ app.delete("/api/vendors-invoices", (req, res) => {
     return res.status(400).json({ error: "No IDs provided for deletion" });
   }
   const placeholders = ids.map(() => '?').join(',');
-  db.run(`DELETE FROM vendors_invoices WHERE id IN (${placeholders})`, ids, function (err) {
+  db.run(`DELETE FROM vendors_invoices WHERE vinvoice_id IN (${placeholders})`, ids, function (err) {
     if (err) {
       console.error("Error deleting vendor invoices:", err);
       return res.status(500).json({ error: "Failed to delete vendor invoices" });
@@ -1413,11 +1640,15 @@ app.post("/api/vendors-invoices/import", (req, res) => {
   if (!Array.isArray(data) || data.length === 0) {
     return res.status(400).json({ error: "No data provided for import" });
   }
-  const stmt = db.prepare(`INSERT INTO vendors_invoices (vendorName, itemName, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, veshadInvoiceValue, veshadSgst, veshadCgst, veshadIgst) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const stmt = db.prepare(`INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   for (const row of data) {
+    // Convert Excel serial date to YYYY-MM-DD if needed
+    if (row.date && typeof row.date === 'number') {
+      const excelDate = new Date((row.date - 25569) * 86400 * 1000);
+      row.date = excelDate.toISOString().split('T')[0];
+    }
     stmt.run([
-      row.vendorName, row.itemName, row.totalInvoiceValue, row.cgst, row.sgst, row.igst, row.paymentStatus,
-      row.veshadInvoiceRefNo, row.veshadInvoiceValue, row.veshadSgst, row.veshadCgst, row.veshadIgst
+      row.date, row.vendor_id, row.total_quantity, row.totalInvoiceValue, row.cgst, row.sgst, row.igst, row.paymentStatus, row.veshadInvoiceRefNo
     ]);
   }
   stmt.finalize((err) => {
@@ -1429,6 +1660,155 @@ app.post("/api/vendors-invoices/import", (req, res) => {
   });
 });
 // --- End Vendors Invoices API ---
+
+// --- Vendor names API ---
+
+// Get all vendor names
+app.get("/api/vendor-names", (req, res) => {
+  db.all("SELECT * FROM vendor_names ORDER BY date DESC", [], (err, rows) => {
+    if (err) {
+      console.error("Error fetching vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+    }
+    res.json(rows);
+  });
+});
+
+// Add a new vendor names
+app.post("/api/vendor-names", (req, res) => {
+  const {
+    date, vendorName, contactDetails
+  } = req.body;
+  db.run(
+    `INSERT INTO vendor_names (date, vendorName, contactDetails)
+     VALUES (?, ?, ?)`,
+    [date, vendorName, contactDetails],
+    function (err) {
+      if (err) {
+        console.error("Error adding vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to add vendor invoice" });
+      }
+      res.json({ id: this.lastID });
+    }
+  );
+});
+
+// Update a vendor invoice
+app.put("/api/vendor-names/:id", (req, res) => {
+  const { id } = req.params;
+  const {
+    date, vendorName, contactDetails
+  } = req.body;
+  db.run(
+    `UPDATE vendor_names SET date=?, vendorName=?, contactDetails=? WHERE vendor_id=?`,
+    [date, vendorName, contactDetails, id],
+    function (err) {
+      if (err) {
+        console.error("Error updating vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to update vendor invoice" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Delete one or more vendor invoices
+app.delete("/api/vendor-names", (req, res) => {
+  const { ids } = req.body; // expects { ids: [1,2,3] }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "No IDs provided for deletion" });
+  }
+  const placeholders = ids.map(() => '?').join(',');
+  db.run(`DELETE FROM vendor_names WHERE vendor_id IN (${placeholders})`, ids, function (err) {
+    if (err) {
+      console.error("Error deleting vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to delete vendor invoices" });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- End of Vendor Name ---
+
+// --- Vendor items API ---
+
+// Get all vendor items
+app.get("/api/vendor-items", (req, res) => {
+  db.all("SELECT * FROM vendor_items ORDER BY vitem_id DESC", [], (err, rows) => {
+    if (err) {
+      console.error("Error fetching vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+    }
+    res.json(rows);
+  });
+});
+
+// Get all vendor items with given invoice no
+app.get("/api/vendor-items/:id", (req, res) => {
+  db.all("SELECT * FROM vendor_items where vinvoice_id=?", [id], (err, rows) => {
+    if (err) {
+      console.error("Error fetching vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+    }
+    res.json(rows);
+  });
+});
+
+// Add a new vendor names
+app.post("/api/vendor-items", (req, res) => {
+  const {
+    itemName, pricePerUnit, quantity, total, vendor_id, vinvoice_id
+  } = req.body;
+  db.run(
+    `INSERT INTO vendor_items (itemName, pricePerUnit, quantity, total, vendor_id, vinvoice_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [itemName, pricePerUnit, quantity, total, vendor_id, vinvoice_id],
+    function (err) {
+      if (err) {
+        console.error("Error adding vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to add vendor invoice" });
+      }
+      res.json({ id: this.lastID });
+    }
+  );
+});
+
+// Update a vendor invoice
+app.put("/api/vendor-items/:id", (req, res) => {
+  const { id } = req.params;
+  const {
+    itemName, pricePerUnit, quantity, total, vendor_id, vinvoice_id
+  } = req.body;
+  db.run(
+    `UPDATE vendor_items SET itemName=?, pricePerUnit=?, quantity=?, total=?, vendor_id=?, vinvoice_id=? WHERE vitem_id=?`,
+    [itemName, pricePerUnit, quantity, total, vendor_id, vinvoice_id, id],
+    function (err) {
+      if (err) {
+        console.error("Error updating vendor invoice:", err);
+        return res.status(500).json({ error: "Failed to update vendor invoice" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Delete one or more vendor invoices
+app.delete("/api/vendor-items", (req, res) => {
+  const { ids } = req.body; // expects { ids: [1,2,3] }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "No IDs provided for deletion" });
+  }
+  const placeholders = ids.map(() => '?').join(',');
+  db.run(`DELETE FROM vendor_items WHERE vitem_id IN (${placeholders})`, ids, function (err) {
+    if (err) {
+      console.error("Error deleting vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to delete vendor invoices" });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- End of Vendor Items ---
 
 // --- End points for Letter ---
 
@@ -1494,8 +1874,7 @@ app.delete("/api/letters/:id", (req, res) => {
 
 // --- End of Lettet End Points ---
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
-
-export default app;
