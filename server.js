@@ -1728,6 +1728,26 @@ app.delete("/api/vendor-names", (req, res) => {
   });
 });
 
+// Get vendor_id by vendorName
+app.get("/api/vendor-names/by-name", (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: "Missing vendor name in query" });
+  }
+  db.get(
+    "SELECT vendor_id, vendorName FROM vendor_names WHERE vendorName = ?",
+    [name],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      if (!row) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(row);
+    }
+  );
+});
 // --- End of Vendor Name ---
 
 // --- Vendor items API ---
@@ -1794,6 +1814,19 @@ app.put("/api/vendor-items/:id", (req, res) => {
 
 // Delete one or more vendor invoices
 app.delete("/api/vendor-items", (req, res) => {
+  // Support deleting all items for a given vinvoice_id via query param
+  const vinvoice_id = req.query.vinvoice_id;
+  if (vinvoice_id) {
+    db.run("DELETE FROM vendor_items WHERE vinvoice_id = ?", [vinvoice_id], function (err) {
+      if (err) {
+        console.error("Error deleting vendor items by vinvoice_id:", err);
+        return res.status(500).json({ error: "Failed to delete vendor items for invoice" });
+      }
+      return res.json({ success: true, deleted: this.changes });
+    });
+    return;
+  }
+  // Fallback: delete by array of vitem_id
   const { ids } = req.body; // expects { ids: [1,2,3] }
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: "No IDs provided for deletion" });
