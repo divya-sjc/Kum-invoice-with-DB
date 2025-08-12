@@ -1110,7 +1110,7 @@ app.post("/api/purchases/import", upload.single('file'), async (req, res) => {
       'bankPaymentRef': ['bank payment ref', 'payment ref', 'ref no', 'reference', 'ref', 'payment reference', 'bank ref'],
       'clientName': ['client name', 'customer name', 'party name', 'client', 'customer', 'party'],
       'paymentRemarks': ['payment remarks', 'remarks', 'notes', 'comments', 'remark'],
-      'refBankName': ['ref bank name', 'bank name', 'bank', 'ref bank', 'Ref Bank Name'],
+      'refBankName': ['ref bank name', 'Ref Bank Name'], // Only allow exact matches for Ref Bank Name
       'invoiceNo': ['invoice no', 'invoice number', 'inv no', 'invoice', 'inv'],
       'inputCgst': ['input cgst', 'cgst', 'cgst amount', 'cgst amt', 'i cgst'],
       'inputSgst': ['input sgst', 'sgst', 'sgst amount', 'sgst amt', 'i sgst'],
