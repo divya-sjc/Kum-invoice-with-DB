@@ -242,19 +242,15 @@ db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
   FOREIGN KEY (challanNo) REFERENCES delivery_challans(challanNo)
 )`);
 
-  // Company letters table
-  db.run(`CREATE TABLE IF NOT EXISTS company_letters (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    subject TEXT,
-    body TEXT
-  )`);
-
-  // Letter table
+  // letters table
   db.run(`CREATE TABLE IF NOT EXISTS letter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
-    body TEXT
+    "to" TEXT,
+    subject TEXT,
+    body TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 });
 

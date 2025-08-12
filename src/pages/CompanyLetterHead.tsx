@@ -44,10 +44,18 @@ const sampleTable = `
 | Example 1      | 10       | 100.00 |
 | Example 2      | 5        | 50.00  |`;
 
-const initialLetter = {
+type Letter = {
+  id?: number;
+  to: string;
+  subject: string;
+  body: string;
+  date: string;
+};
+
+const initialLetter: Letter = {
   to: "",
   subject: "",
-  body: draftTemplate1 + "\n" + draftTemplate2, // Use both templates for the default body
+  body: draftTemplate4,
   date: new Date().toISOString().slice(0, 10),
 };
 
@@ -55,8 +63,7 @@ function fetchAllLetters() {
   return fetch("/api/letters").then(r => r.json());
 }
 
-function saveLetter(letter) {
-  // Save to backend
+function saveLetter(letter: Letter) {
   return fetch("/api/letters", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -65,13 +72,13 @@ function saveLetter(letter) {
 }
 
 export default function CompanyLetterHead() {
-  const [letters, setLetters] = useState([]);
+  const [letters, setLetters] = useState<Letter[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [letter, setLetter] = useState(initialLetter);
-  const [lastSavedLetter, setLastSavedLetter] = useState(initialLetter);
+  const [letter, setLetter] = useState<Letter>(initialLetter);
+  const [lastSavedLetter, setLastSavedLetter] = useState<Letter>(initialLetter);
   const [previewMode, setPreviewMode] = useState(false);
   const [editableDraft, setEditableDraft] = useState(draftTemplate4);
-  const [selectedLetterIds, setSelectedLetterIds] = useState([]);
+  const [selectedLetterIds, setSelectedLetterIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchAllLetters().then(setLetters);
@@ -94,21 +101,32 @@ export default function CompanyLetterHead() {
   };
 
   const handleSave = async () => {
-    if (!letter.subject.trim()) return;
-    try {
-      const result = await saveLetter({ ...letter, body: editableDraft });
-      if (result && result.id) {
-        setShowForm(false);
-        setPreviewMode(false);
-        fetchAllLetters().then(setLetters);
-        setLastSavedLetter({ ...letter, body: editableDraft });
-      } else {
-        alert('Failed to save letter. Please try again.');
-      }
-    } catch (e) {
-      alert('Error saving letter. Please check your connection or try again.');
+  if (!letter.subject.trim()) return;
+  try {
+    let result;
+    if (letter.id) {
+      // Edit mode: update existing letter
+      result = await fetch(`/api/letters/${letter.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...letter, body: editableDraft }),
+      }).then(r => r.json());
+    } else {
+      // Create mode: new letter
+      result = await saveLetter({ ...letter, body: editableDraft });
     }
-  };
+    if (result && (result.id || result.success)) {
+      setShowForm(false);
+      setPreviewMode(false);
+      fetchAllLetters().then(setLetters);
+      setLastSavedLetter({ ...letter, body: editableDraft });
+    } else {
+      alert('Failed to save letter. Please try again.');
+    }
+  } catch (e) {
+    alert('Error saving letter. Please check your connection or try again.');
+  }
+};
 
   const insertTableAtCursor = () => {
     const textarea = document.getElementById('body-textarea') as HTMLTextAreaElement | null;
@@ -154,7 +172,7 @@ export default function CompanyLetterHead() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ fontSize: 24, fontWeight: 'bold' }}>Company Letters</h2>
           <div>
-            <button onClick={() => { setLetter({ ...initialLetter, body: draftTemplate2 }); setShowForm(true); }} style={{ fontSize: 16, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 18px', cursor: 'pointer', marginRight: 12 }}>Create New Letter</button>
+            <button onClick={() => { setLetter({ ...initialLetter, body: draftTemplate4 }); setShowForm(true); }} style={{ fontSize: 16, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 18px', cursor: 'pointer', marginRight: 12 }}>Create New Letter</button>
             <button onClick={handleDeleteSelected} disabled={!selectedLetterIds.length} style={{ fontSize: 16, background: selectedLetterIds.length ? '#e53e3e' : '#ccc', color: 'white', border: 'none', borderRadius: 4, padding: '8px 18px', cursor: selectedLetterIds.length ? 'pointer' : 'not-allowed' }}>Delete Selected</button>
           </div>
         </div>
@@ -244,16 +262,16 @@ export default function CompanyLetterHead() {
       y += 15;
       const fromLines = doc.splitTextToSize(draftTemplate2, pageWidth - margin*2 - 20);
       doc.text(fromLines, margin+20, y);
-      y += fromLines.length * 15 + 10;
+      y += fromLines.length * 10 + 10;
       // draftTemplate3
       const draft3Lines = doc.splitTextToSize(draftTemplate3, pageWidth - margin*2);
       doc.text(draft3Lines, margin, y);
-      y += draft3Lines.length * 15 + 10;
+      y += draft3Lines.length * 15 + 5;
       // Subject
       doc.setFont('Times', 'bold');
-      doc.text('Subject:', margin, y);
+      doc.text('Subject:', margin+20, y);
       doc.setFont('Times', 'normal');
-      doc.text(letter.subject, margin+60, y);
+      doc.text(letter.subject, margin+70, y);
       y += 20;
       // Body
       const bodyLines = doc.splitTextToSize(letter.body || '', pageWidth - margin*2);
