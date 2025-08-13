@@ -19,10 +19,11 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 const InvoiceStatusTab = lazy(() => import('@/components/InvoiceStatusTab'));
 
 interface Invoice {
-  notes: string;
+  id: string;
   invoiceNumber: string;
   date: string;
   revision: number;
+  gst: string;
   deliveryAddress_name: string;
   deliveryAddress_address: string;
   deliveryAddress_city: string;
@@ -33,25 +34,39 @@ interface Invoice {
   hsnSac: string;
   poRefNo: string;
   paymentReceived: number;
-  totalNet: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
-  grandTotal: number;
-  amountInWords: string; // ✅ string, not number
   balanceDue: number;
-  paymentStatus: string;
-  paymentBank?: string;
-  paymentBankRef?: string;
-  paymentDate?: string;
-  miscNotes?: string; // <-- Added property
+  totalNet: number;
+  grandTotal: number;
+  amountInWords: string;
+  paymentStatus?: 'Paid' | 'Pending';
+  paymentBank?: string; 
+  paymentRecvdDate?: string; 
+  paymentBankRef?: string; 
+  paymentDate?: string; 
+  ewayBillRef?: string; 
   items?: {
-    id: number,
-    item_description: string,
-    quantity: number,
-    unitPrice: number,
-    total: number
-  }[];
+    id: number;
+    item_description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];  
+  supplier: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    phone: string;
+    email: string;
+  };
+  veshadCgst: number;
+  veshadSgst: number;
+  veshadIgst: number;
+  notes?: string;
+  vendor_id?: number;
+  profitPercent?: number;
 }
 
 const InvoiceList = () => {
@@ -61,7 +76,7 @@ const InvoiceList = () => {
   // New state for month selection and GST
   const [months, setMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [gstDetails, setGstDetails] = useState<{ cgst: number; sgst: number; igst: number } | null>(null);
+  const [gstDetails, setGstDetails] = useState<{ veshadCgst: number; veshadSgst: number; veshadIgst: number } | null>(null);
   const [editPaymentInvoice, setEditPaymentInvoice] = useState<Invoice | null>(null);
   const [paymentForm, setPaymentForm] = useState({
     paymentReceived: 0,
@@ -132,9 +147,9 @@ const InvoiceList = () => {
         if (!response.ok) throw new Error('Failed to fetch GST');
         const data = await response.json();
         setGstDetails({
-          cgst: data.cgst ?? 0,
-          sgst: data.sgst ?? 0,
-          igst: data.igst ?? 0,
+          veshadCgst: data.veshadCgst ?? 0,
+          veshadSgst: data.veshadSgst ?? 0,
+          veshadIgst: data.veshadIgst ?? 0,
         });
       } catch (err) {
         setGstDetails(null);
@@ -205,7 +220,7 @@ const InvoiceList = () => {
       paymentBankRef: invoice.paymentBankRef ?? '',
       paymentDate: invoice.paymentDate ?? '',
       paymentStatus: invoice.paymentStatus ?? 'Pending',
-      miscNotes: invoice.miscNotes ?? '', // Initialize miscNotes
+      miscNotes: invoice.notes ?? '', // Initialize miscNotes
     });
   };
 
@@ -254,7 +269,7 @@ const InvoiceList = () => {
       paymentReceived: invoice.paymentReceived?.toString() || '',
       paymentDate: invoice.paymentDate ? format(new Date(invoice.paymentDate), 'yyyy-MM-dd') : '',
       notes: typeof invoice.notes === 'string' ? invoice.notes : '', // Defensive: always string
-      miscNotes: invoice.miscNotes || '',
+      miscNotes: invoice.notes || '',
       activeTab: 'payment', // Default to Payment Info tab
     });
     setEditModalOpen(true);
@@ -355,9 +370,9 @@ const InvoiceList = () => {
           })}
         </select>
         <div className="ml-6 text-lg font-semibold text-purple-800 flex gap-6">
-          <span>CGST: {gstDetails ? `₹${gstDetails.cgst.toLocaleString('en-IN')}` : '—'}</span>
-          <span>SGST: {gstDetails ? `₹${gstDetails.sgst.toLocaleString('en-IN')}` : '—'}</span>
-          <span>IGST: {gstDetails ? `₹${gstDetails.igst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>CGST: {gstDetails ? `₹${gstDetails.veshadCgst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>SGST: {gstDetails ? `₹${gstDetails.veshadSgst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>IGST: {gstDetails ? `₹${gstDetails.veshadIgst.toLocaleString('en-IN')}` : '—'}</span>
         </div>
       </div>
 
@@ -409,11 +424,11 @@ const InvoiceList = () => {
                   <span className="text-gray-700 font-medium truncate min-w-0 flex-grow">{invoice.deliveryAddress_name}</span>
                   {invoice.deliveryAddress_state?.trim().toLowerCase() === "karnataka" ? (
                     <>
-                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">CGST: ₹{invoice.cgst?.toLocaleString('en-IN') ?? '-'}</span>
-                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5 ml-1">SGST: ₹{invoice.sgst?.toLocaleString('en-IN') ?? '-'}</span>
+                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">CGST: ₹{invoice.veshadCgst?.toLocaleString('en-IN') ?? '-'}</span>
+                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5 ml-1">SGST: ₹{invoice.veshadSgst?.toLocaleString('en-IN') ?? '-'}</span>
                     </>
                   ) : (
-                    <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">IGST: ₹{invoice.igst?.toLocaleString('en-IN') ?? '-'}</span>
+                    <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">IGST: ₹{invoice.veshadIgst?.toLocaleString('en-IN') ?? '-'}</span>
                   )}
                   <span className="flex items-center text-xs text-gray-500 ml-2">
                     <Calendar className="h-3 w-3 mr-1" />
@@ -438,8 +453,8 @@ const InvoiceList = () => {
                 <span className="text-xs text-gray-500">Received: <span className="font-medium text-gray-700">₹{(invoice.paymentReceived ?? 0).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Due: <span className="font-medium text-gray-700">₹{((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Payment Recvd Date: <span className="font-medium text-gray-700">{invoice.paymentDate ? format(new Date(invoice.paymentDate), 'dd-MMM-yyyy') : '-'}</span></span>
-                {invoice.miscNotes && (
-                  <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.miscNotes}</span></span>
+                {invoice.notes && (
+                  <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.notes}</span></span>
                 )}
               </div>
             </Card>

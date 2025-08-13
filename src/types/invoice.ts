@@ -27,11 +27,11 @@ export interface Invoice {
   grandTotal: number;
   amountInWords: string;
   paymentStatus?: 'Paid' | 'Pending';
-  paymentBank?: string; // Added
-  paymentRecvdDate?: string; // Added
-  paymentBankRef?: string; // Added
-  paymentDate?: string; // Added for payment date
-  ewayBillRef?: string; // Added for Eway Bill Ref
+  paymentBank?: string; 
+  paymentRecvdDate?: string; 
+  paymentBankRef?: string; 
+  paymentDate?: string; 
+  ewayBillRef?: string; 
   items: {
     id: number;
     item_description: string;

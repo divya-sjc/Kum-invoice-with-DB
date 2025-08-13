@@ -359,9 +359,9 @@ app.get("/api/gst-collected", (req, res) => {
         return res.status(500).json({ error: "Failed to fetch GST summary" });
       }
       res.json({
-        cgst: row.cgst || 0,
-        sgst: row.sgst || 0,
-        igst: row.igst || 0
+        veshadCgst: row.veshadCgst || 0,
+        veshadSgst: row.veshadSgst || 0,
+        veshadIgst: row.veshadIgst || 0
       });
     }
   );
@@ -392,9 +392,9 @@ app.get("/api/gst-collected-fy", (req, res) => {
         return res.status(500).json({ error: "Failed to fetch GST FY summary" });
       }
       res.json({
-        cgst: row.cgst || 0,
-        sgst: row.sgst || 0,
-        igst: row.igst || 0
+        veshadCgst: row.veshadCgst || 0,
+        veshadSgst: row.veshadSgst || 0,
+        veshadIgst: row.veshadIgst || 0
       });
     }
   );
