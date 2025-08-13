@@ -310,8 +310,6 @@ const InvoiceList = () => {
       setEditFields(prev => ({ ...prev, miscNotes: updated.miscNotes }));
       setEditModalOpen(false);
       toast({ title: 'Payment Info Updated', description: `Invoice ${updated.invoiceNumber} payment info updated.` });
-      // Force EditInvoice to refetch by navigating to edit page with a unique param
-      navigate(`/invoices/edit/${encodeURIComponent(updated.invoiceNumber)}?refresh=${Date.now()}`);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update payment info.' });
     }
