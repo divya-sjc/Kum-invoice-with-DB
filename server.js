@@ -234,7 +234,7 @@ db.serialize(() => {
 
   // Delivery items table
 db.run(`CREATE TABLE IF NOT EXISTS delivery_items (
-  id INTEGER,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   challanNo TEXT,
   item_description TEXT NOT NULL,
   quantity INTEGER NOT NULL,
@@ -434,9 +434,18 @@ app.get("/api/delivery-challans/:challanNo", (req, res) => {
     if (!row) {
       return res.status(404).json({ error: 'Delivery challan not found' });
     }
-    // Parse the JSON items string if present
-    row.items = row.items ? JSON.parse(row.items) : [];
-    res.json(row);
+    // Fetch items from delivery_items table for this challanNo
+    db.all("SELECT * FROM delivery_items WHERE challanNo = ?", [req.params.challanNo], (itemErr, items) => {
+      if (itemErr) {
+        console.error("Error fetching delivery items:", itemErr);
+        return res.status(500).json({
+          error: 'Failed to fetch delivery items',
+          details: itemErr.message
+        });
+      }
+      row.items = items || [];
+      res.json(row);
+    });
   });
 });
 
@@ -538,8 +547,7 @@ app.put("/api/delivery-challans/:challanNo", (req, res) => {
       dispatch_date = ?,
       bill_to_address = ?,
       eway_bill_no = ?,
-      invoiceNumber = ?,
-      updatedAt = CURRENT_TIMESTAMP
+      invoiceNumber = ?
     WHERE challanNo = ?
   `;
 

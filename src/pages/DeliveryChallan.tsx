@@ -277,10 +277,22 @@ export default function DeliveryChallan() {
   const handleEdit = async (challanNo) => {
     try {
       const dcData = await getDCByNumber(challanNo);
+      // Fetch items from delivery_items table for this challanNo
+      let items = [];
+      try {
+        const itemsRes = await fetch(`http://localhost:4000/api/delivery-challans/${encodeURIComponent(challanNo)}/items`);
+        if (itemsRes.ok) {
+          items = await itemsRes.json();
+        } else {
+          items = dcData.items || [];
+        }
+      } catch {
+        items = dcData.items || [];
+      }
       setChallan({
         ...dcData,
         isEditing: true,
-        items: dcData.items || []
+        items: items
       });
       setInvoiceNumber(dcData.invoiceNumber || '');
       setShowForm(true);
