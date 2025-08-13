@@ -37,9 +37,8 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
 
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // State for form data
   const [formData, setFormData] = useState<Invoice | null>(null);
+  const [vendors, setVendors] = useState<{ vendor_id: number; vendorName: string }[]>([]);
 
   // Fetch invoice number if creating new
   useEffect(() => {
@@ -50,6 +49,11 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
       setLoading(false);
       return;
     }
+    // Fetch vendors
+    fetch("http://localhost:4000/api/vendor-names")
+    .then(res => res.json())
+    .then(data => setVendors(data))
+    .catch(() => setVendors([]));
 
     // Creating mode: generate a new invoice number
     const invoiceNumber = await generateInvoiceNumber();
@@ -76,9 +80,9 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
       deliveryAddress_state: "",
       deliveryDate: new Date().toISOString().split('T')[0],
       deliveryChallanRef: "",
-      ewayBillRef: "",
       hsnSac: "",
       poRefNo: "",
+      ewayBillRef: "",
       items: [{
         id: 1,
         item_description: "",
@@ -87,25 +91,23 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
         total: 0
       }],
       totalNet: 0,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
+      veshadCgst: 0,
+      veshadSgst: 0,
+      veshadIgst: 0,
       manualEntryLabel: "Manual Entry",
       manualEntryAmount: 0,
-      manualEntrySign: 1, // 1 for +, -1 for -
+      manualEntrySign: 1,
       grandTotal: 0,
       amountInWords: "",
       paymentReceived: 0,
+      paymentBank: "",
+      paymentBankRef: "",
+      paymentDate: "",
       balanceDue: 0,
       paymentStatus: "Pending",
-      termsAndConditions: `1. Any discrepancy in above confirmation must be communicated within 3 days.\nFailing which material dispatched as per O.C.\n2. GST shall be charged as applicable at the time of dispatch.\n3. This order confirmation is valid till 60 days after the delivery schedule.\n4. All the instruments supplied by us carry guarantee for their specified material, components and there is no life guarantee, as the life is depends on process parameters and application.`,
-      consignee: "M/s. VESHAD & COMPANY",
-      destination: "BANGALORE, Karnataka",
-      deliverySchedule: "BEFORE 30.05.2025",
-      pf: "INCLUSIVE",
-      freight: "EX-WORKS",
-      modeOfDespatch: "By Road",
-      paymentTerms: "100% DIRECT WITHIN 15 DAYS",
+      notes: "",
+      vendor_id: 0,
+      profitPercent: 0,
     });
     setLoading(false);
   }
@@ -120,18 +122,18 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
     if (!formData) return;
     // Ensure all calculations maintain two decimal places
     const totalNet = parseFloat(formData.items.reduce((sum, item) => sum + item.total, 0).toFixed(2));
-    let cgst = 0, sgst = 0, igst = 0, grandTotal = 0;
+    let veshadCgst = 0, veshadSgst = 0, veshadIgst = 0, grandTotal = 0;
     let gstTotal = 0;
     if (formData.deliveryAddress_state.trim().toLowerCase() === "karnataka") {
-      cgst = parseFloat((totalNet * 0.09).toFixed(2));
-      sgst = parseFloat((totalNet * 0.09).toFixed(2));
-      igst = 0;
-      gstTotal = cgst + sgst;
+      veshadCgst = parseFloat((totalNet * 0.09).toFixed(2));
+      veshadSgst = parseFloat((totalNet * 0.09).toFixed(2));
+      veshadIgst = 0;
+      gstTotal = veshadCgst + veshadSgst;
     } else {
-      cgst = 0;
-      sgst = 0;
-      igst = parseFloat((totalNet * 0.18).toFixed(2));
-      gstTotal = igst;
+      veshadCgst = 0;
+      veshadSgst = 0;
+      veshadIgst = parseFloat((totalNet * 0.18).toFixed(2));
+      gstTotal = veshadIgst;
     }
     // Manual entry (after GST, before Grand Total)
     const manual = (formData.manualEntryAmount || 0) * (formData.manualEntrySign || 1);
@@ -139,9 +141,9 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
     setFormData(prev => prev && ({
       ...prev,
       totalNet,
-      cgst,
-      sgst,
-      igst,
+      veshadCgst,
+      veshadSgst,
+      veshadIgst,
       grandTotal,
       amountInWords: numberToWords(grandTotal)
     }));
@@ -242,22 +244,27 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
       deliveryAddress_state: formData.deliveryAddress_state,
       deliveryDate: formData.deliveryDate,
       deliveryChallanRef: formData.deliveryChallanRef,
-      ewayBillRef: formData.ewayBillRef || '', // Added for Eway Bill No
+      ewayBillRef: formData.ewayBillRef || '',
       hsnSac: formData.hsnSac,
       poRefNo: formData.poRefNo,
-      invoiceTotal: grandTotal,
       totalNet: parseFloat(formData.totalNet.toFixed(2)),
-      cgst: parseFloat(formData.cgst.toFixed(2)),
-      sgst: parseFloat(formData.sgst.toFixed(2)),
-      igst: parseFloat(formData.igst.toFixed(2)),
-      grandTotal: grandTotal,
+      veshadCgst: parseFloat(formData.veshadCgst.toFixed(2)),
+      veshadSgst: parseFloat(formData.veshadSgst.toFixed(2)),
+      veshadIgst: parseFloat(formData.veshadIgst.toFixed(2)),
+      grandTotal: formData.grandTotal,
       amountInWords: formData.amountInWords,
       paymentReceived: paymentReceived,
-      paymentBank: formData.paymentBank || '', // Added
-      paymentBankRef: formData.paymentBankRef || '', // Added
-      paymentDate: formData.paymentDate || '', // Added
-      balanceDue: balanceDueFormatted,
-      paymentStatus: paymentStatus,
+      paymentBank: formData.paymentBank || '',
+      paymentBankRef: formData.paymentBankRef || '',
+      paymentDate: formData.paymentDate || '',
+      balanceDue: parseFloat((formData.grandTotal - formData.paymentReceived).toFixed(2)),
+      paymentStatus: (formData.grandTotal - formData.paymentReceived) <= 0 ? 'Paid' : 'Pending',
+      notes: formData.notes || '',
+      vendor_id: formData.vendor_id || null,
+      profitPercent: formData.profitPercent || 0,
+      manualEntryLabel: formData.manualEntryLabel || '',
+      manualEntryAmount: formData.manualEntryAmount || 0,
+      manualEntrySign: formData.manualEntrySign || 1,
       items: formData.items.map(item => ({
         item_description: item.item_description,
         quantity: item.quantity,
@@ -345,9 +352,9 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
       ...formData,
       invoiceTotal: grandTotal,
       totalNet: parseFloat(formData.totalNet.toFixed(2)),
-      cgst: parseFloat(formData.cgst.toFixed(2)),
-      sgst: parseFloat(formData.sgst.toFixed(2)),
-      igst: parseFloat(formData.igst.toFixed(2)),
+      veshadCgst: parseFloat(formData.veshadCgst.toFixed(2)),
+      veshadSgst: parseFloat(formData.veshadSgst.toFixed(2)),
+      veshadIgst: parseFloat(formData.veshadIgst.toFixed(2)),
       grandTotal: grandTotal,
       amountInWords: formData.amountInWords,
       paymentReceived: paymentReceived,
@@ -523,6 +530,7 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
         <CardHeader>
           <CardTitle>Additional Details</CardTitle>
         </CardHeader>
+
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="deliveryDate">Delivery Date</Label>
@@ -531,43 +539,77 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
               type="date"
               value={formData.deliveryDate}
               onChange={(e) => handleInputChange('deliveryDate', e.target.value)}
+              className="w-full"
             />
             <div className="text-xs text-gray-500 mt-1">
               {formatDateToDDMMMMYYYY(formData.deliveryDate)}
             </div>
           </div>
+
           <div>
             <Label htmlFor="deliveryChallanRef">Delivery Challan Ref</Label>
             <Input
               id="deliveryChallanRef"
               value={formData.deliveryChallanRef}
               onChange={(e) => handleInputChange('deliveryChallanRef', e.target.value)}
+              className="w-full"
             />
           </div>
+
           <div>
             <Label htmlFor="ewayBillRef">Eway Bill No</Label>
             <Input
               id="ewayBillRef"
               value={formData.ewayBillRef || ''}
               onChange={(e) => handleInputChange('ewayBillRef', e.target.value)}
+              className="w-full"
             />
           </div>
-          <div>
-            <Label htmlFor="hsnSac">HSN/SAC</Label>
-            <Input
-              id="hsnSac"
-              value={formData.hsnSac}
-              onChange={(e) => handleInputChange('hsnSac', e.target.value)}
-            />
-          </div>
+
+          {/* Make this child span all 3 columns on md so its inner grid fills the card width */}
           <div className="md:col-span-3">
-            <Label htmlFor="poRefNo">PO Ref No</Label>
-            <Textarea
-              id="poRefNo"
-              value={formData.poRefNo}
-              onChange={(e) => handleInputChange('poRefNo', e.target.value)}
-              rows={2}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+              <div>
+                <Label htmlFor="hsnSac">HSN/SAC</Label>
+                <Input
+                  id="hsnSac"
+                  value={formData.hsnSac}
+                  onChange={(e) => handleInputChange('hsnSac', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="poRefNo">PO Ref No</Label>
+                <Input
+                  id="poRefNo"
+                  value={formData.poRefNo}
+                  onChange={(e) => handleInputChange('poRefNo', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="vendorName">Vendor Name</Label>
+                <select
+                  id="vendorName"
+                  className="border rounded px-2 py-1 w-full"
+                  value={formData.vendor_id || ""}
+                  onChange={e => {
+                    const selectedId = Number(e.target.value);
+                    setFormData(prev => prev && ({ ...prev, vendor_id: selectedId }));
+                  }}
+                  required
+                >
+                  <option value="">-- Select Vendor --</option>
+                  {vendors.map(vendor => (
+                    <option key={vendor.vendor_id} value={vendor.vendor_id}>
+                      {vendor.vendorName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -602,11 +644,10 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
             {formData.items.map((item, index) => (
               <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg">
                 <div className="md:col-span-3">
-                  <Textarea
+                  <Input
                     id={`description-${index}`}
                     value={item.item_description}
                     onChange={(e) => handleItemChange(index, 'item_description', e.target.value)}
-                    rows={2}
                     placeholder="Enter item description"
                   />
                 </div>
@@ -655,9 +696,84 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
         </CardContent>
       </Card>
 
+      {/* Totals Summary with Manual Entry */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full overflow-x-auto">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 text-center items-end">
+              <div>
+                <p className="text-sm text-gray-500">Total Net</p>
+                <p className="text-lg font-bold">₹{formData.totalNet.toFixed(2)}</p>
+              </div>
+              {formData.deliveryAddress_state.trim().toLowerCase() === "karnataka" ? (
+                <>
+                  <div>
+                    <p className="text-sm text-gray-500">CGST (9%)</p>
+                    <p className="text-lg font-bold">₹{formData.veshadCgst.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">SGST (9%)</p>
+                    <p className="text-lg font-bold">₹{formData.veshadSgst.toFixed(2)}</p>
+                  </div>
+                  <div className="hidden md:block"></div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-sm text-gray-500">IGST (18%)</p>
+                    <p className="text-lg font-bold">₹{formData.veshadIgst.toFixed(2)}</p>
+                  </div>
+                  <div className="hidden md:block"></div>
+                  <div className="hidden md:block"></div>
+                </>
+              )}
+              <div className="flex flex-col items-center md:items-end md:col-span-1">
+                <div className="flex items-center gap-2 w-full justify-center md:justify-end">
+                  <input
+                    type="text"
+                    value={formData.manualEntryLabel || "Manual Entry"}
+                    onChange={e => setFormData(prev => prev && ({ ...prev, manualEntryLabel: e.target.value }))}
+                    className="border rounded px-2 py-1 w-32 text-sm"
+                    placeholder="Manual Entry"
+                  />
+                  <select
+                    value={formData.manualEntrySign || 1}
+                    onChange={e => setFormData(prev => prev && ({ ...prev, manualEntrySign: parseInt(e.target.value) }))}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    <option value={1}>+</option>
+                    <option value={-1}>-</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={formData.manualEntryAmount || 0}
+                    onChange={e => setFormData(prev => prev && ({ ...prev, manualEntryAmount: parseFloat(e.target.value) || 0 }))}
+                    className="border rounded px-2 py-1 w-24 text-sm text-right"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <span className="text-xs text-gray-500 mt-1">(Included in Grand Total, not in GST)</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Grand Total</p>
+                <p className="text-xl font-bold text-blue-900">₹{formData.grandTotal.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-gray-600">Amount in Words:</p>
+            <p className="font-medium">{formData.amountInWords}</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Payment Details (Enhanced) */}
       <Card className="border-blue-200 shadow-md bg-blue-50">
-        <CardHeader className="bg-blue-600 text-white">
+        <CardHeader className="bg-blue-500 text-white">
           <CardTitle className="text-xl">Payment Information</CardTitle>
         </CardHeader>
         {/* Compact 2-row layout for payment info */}
@@ -691,76 +807,6 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
                 <span className="ml-2 text-red-600 font-bold text-xs uppercase tracking-wider">Payment Recvd</span>
               )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-
-      {/* Totals Summary with Manual Entry */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-sm text-gray-500">Total Net</p>
-              <p className="text-lg font-bold">₹{formData.totalNet.toFixed(2)}</p>
-            </div>
-            {formData.deliveryAddress_state.trim().toLowerCase() === "karnataka" ? (
-              <>
-                <div>
-                  <p className="text-sm text-gray-500">CGST (9%)</p>
-                  <p className="text-lg font-bold">₹{formData.cgst.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">SGST (9%)</p>
-                  <p className="text-lg font-bold">₹{formData.sgst.toFixed(2)}</p>
-                </div>
-              </>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500">IGST (18%)</p>
-                <p className="text-lg font-bold">₹{formData.igst.toFixed(2)}</p>
-              </div>
-            )}
-            {/* Manual Entry Line */}
-            <div className="col-span-2 md:col-span-4 flex flex-col items-center mt-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={formData.manualEntryLabel || "Manual Entry"}
-                  onChange={e => setFormData(prev => prev && ({ ...prev, manualEntryLabel: e.target.value }))}
-                  className="border rounded px-2 py-1 w-32 text-sm"
-                  placeholder="Manual Entry"
-                />
-                <select
-                  value={formData.manualEntrySign || 1}
-                  onChange={e => setFormData(prev => prev && ({ ...prev, manualEntrySign: parseInt(e.target.value) }))}
-                  className="border rounded px-2 py-1 text-sm"
-                >
-                  <option value={1}>+</option>
-                  <option value={-1}>-</option>
-                </select>
-                <input
-                  type="number"
-                  value={formData.manualEntryAmount || 0}
-                  onChange={e => setFormData(prev => prev && ({ ...prev, manualEntryAmount: parseFloat(e.target.value) || 0 }))}
-                  className="border rounded px-2 py-1 w-24 text-sm text-right"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <span className="text-xs text-gray-500 mt-1">(Included in Grand Total, not in GST)</span>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Grand Total</p>
-              <p className="text-xl font-bold text-blue-900">₹{formData.grandTotal.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600">Amount in Words:</p>
-            <p className="font-medium">{formData.amountInWords}</p>
           </div>
         </CardContent>
       </Card>

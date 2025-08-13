@@ -24,9 +24,6 @@ export interface Invoice {
   paymentReceived: number;
   balanceDue: number;
   totalNet: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
   grandTotal: number;
   amountInWords: string;
   paymentStatus?: 'Paid' | 'Pending';
@@ -60,4 +57,13 @@ export interface Invoice {
   freight?: string;
   modeOfDespatch?: string;
   paymentTerms?: string;
+  veshadCgst: number;
+  veshadSgst: number;
+  veshadIgst: number;
+  notes?: string;
+  vendor_id?: number;
+  profitPercent?: number;
+  manualEntryLabel?: string;
+  manualEntryAmount?: number;
+  manualEntrySign?: number;
 }

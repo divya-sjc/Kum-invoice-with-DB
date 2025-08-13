@@ -1351,12 +1351,10 @@ app.post("/api/invoices", (req, res) => {
   console.log('Creating new invoice with data:', JSON.stringify(req.body, null, 2));
   
   const {
-    invoiceNumber, date, revision, deliveryAddress_name, deliveryAddress_address, 
-    deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
-    deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, 
-    cgst, sgst, igst, grandTotal, amountInWords, paymentDate, paymentBank, 
-    balanceDue, paymentStatus, ewayBillRef, items, notes,
-    manualEntryLabel, manualEntryAmount, manualEntrySign
+    invoiceNumber,  date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode,
+    deliveryAddress_state, deliveryDate, deliveryChallanRef, hsnSac, poRefNo, ewayBillRef, invoiceTotal, totalNet, veshadCgst, veshadSgst,
+    veshadIgst, grandTotal, amountInWords, paymentReceived, paymentBank, paymentBankRef, paymentDate, balanceDue, paymentStatus, notes,
+    vendor_id, profitPercent, items
   } = req.body;
 
   // Basic validation
@@ -1384,13 +1382,11 @@ app.post("/api/invoices", (req, res) => {
     // Insert the invoice - only using columns that exist in the table
     const insertInvoiceQuery = `
       INSERT INTO invoices (
-        invoiceNumber, date, revision, deliveryAddress_name, deliveryAddress_address, 
-        deliveryAddress_city, deliveryAddress_postalCode, deliveryAddress_state,
-        deliveryDate, deliveryChallanRef, hsnSac, poRefNo, paymentReceived, totalNet, 
-        cgst, sgst, igst, grandTotal, amountInWords, paymentDate, paymentBank, 
-        balanceDue, paymentStatus, ewayBillRef, notes,
-        manualEntryLabel, manualEntryAmount, manualEntrySign
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        invoiceNumber,  date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode,
+        deliveryAddress_state, deliveryDate, deliveryChallanRef, hsnSac, poRefNo, ewayBillRef, invoiceTotal, totalNet, veshadCgst, veshadSgst,
+        veshadIgst, grandTotal, amountInWords, paymentReceived, paymentBank, paymentBankRef, paymentDate, balanceDue, paymentStatus, notes,
+        vendor_id, profitPercent
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.run(
@@ -1399,12 +1395,11 @@ app.post("/api/invoices", (req, res) => {
         invoiceNumber, date, revision || 1, deliveryAddress_name || '', 
         deliveryAddress_address || '', deliveryAddress_city || '', 
         deliveryAddress_postalCode || '', deliveryAddress_state || '',
-        deliveryDate || '', deliveryChallanRef || '', hsnSac || '', poRefNo || '', 
-        paymentReceived || 0, totalNet || 0, cgst || 0, sgst || 0, igst || 0, 
-        grandTotal, amountInWords || '', paymentDate || '', paymentBank || '', 
-        balanceDue || grandTotal, paymentStatus || 'Pending', ewayBillRef || '',
-        notes || '',
-        manualEntryLabel || '', manualEntryAmount || 0, manualEntrySign || 1
+        deliveryDate || '', deliveryChallanRef || '', hsnSac || '', poRefNo || '', ewayBillRef || '',
+        invoiceTotal || 0, totalNet || 0, veshadCgst || 0, veshadSgst || 0, veshadIgst || 0, 
+        grandTotal || 0, amountInWords || '', paymentReceived || 0, paymentBank || '', paymentBankRef || '',
+        paymentDate || '', balanceDue || grandTotal, paymentStatus || 'Pending', 
+        notes || '',  vendor_id || null, profitPercent || 0
       ],
       function (err) {
         if (err) {
