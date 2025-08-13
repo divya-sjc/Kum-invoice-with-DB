@@ -238,7 +238,7 @@ const InvoiceList = () => {
       paymentBankRef: paymentForm.paymentBankRef,
       paymentDate: paymentForm.paymentDate,
       paymentStatus: paymentForm.paymentStatus,
-      miscNotes: paymentForm.notes, // Save miscNotes
+      notes: paymentForm.notes,
       balanceDue: (editPaymentInvoice.grandTotal ?? 0) - Number(paymentForm.paymentReceived),
     };
     try {
@@ -277,9 +277,9 @@ const InvoiceList = () => {
   const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditFields(prev => ({ ...prev, [name]: value }));
-    // if (name === 'miscNotes') {
-    //   setEditInvoice(prev => prev ? { ...prev, miscNotes: value } : prev);
-    // }
+    if (name === 'notes') {
+      setEditInvoice(prev => prev ? { ...prev, notes: value } : prev);
+    }
   };
 
   // Save payment info
@@ -296,7 +296,6 @@ const InvoiceList = () => {
         paymentBankRef: editFields.paymentBankRef,
         paymentReceived: Number(editFields.paymentReceived) || 0,
         paymentDate: editFields.paymentDate || null,
-        miscNotes: editFields.notes !== undefined ? editFields.notes : latestInvoice.miscNotes || '',
         notes: editFields.notes !== undefined ? editFields.notes : latestInvoice.notes || '', 
       };
       const res = await fetch(`http://localhost:4000/api/invoices/${encodeURIComponent(editInvoice.invoiceNumber)}`, {
@@ -483,9 +482,10 @@ const InvoiceList = () => {
             <label className="text-xs font-medium">Misc Notes</label>
             <textarea
               className="border rounded w-full p-2 min-h-[60px] text-sm"
-              value={paymentForm.notes}
+              value={typeof paymentForm.notes === 'string' ? paymentForm.notes : (paymentForm.notes !== undefined && paymentForm.notes !== null ? String(paymentForm.notes) : '')}
               name="notes"
-              onChange={e => handlePaymentFormChange('notes', e.target.value)}
+              placeholder="Enter any miscellaneous notes here..."
+              onChange={e => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
             />
           </div>
           <DialogFooter>
@@ -545,8 +545,8 @@ const InvoiceList = () => {
                 <div>
                   <Label htmlFor="miscNotes">Misc Notes</Label>
                   <textarea
-                    id="miscNotes"
-                    name="miscNotes"
+                    id="notes"
+                    name="notes"
                     className="border rounded w-full p-2 min-h-[80px] text-sm"
                     value={editFields.notes || ''}
                     onChange={handleEditFieldChange}
