@@ -1739,6 +1739,27 @@ app.get("/api/vendor-names/by-name", (req, res) => {
     }
   );
 });
+
+// Get vendor_id by vendor_id from vendorName
+app.get("/api/vendor-names/by-id", (req, res) => {
+  const { id } = req.query;
+  if (!id) {
+    return res.status(400).json({ error: "Missing vendor name in query" });
+  }
+  db.get(
+    "SELECT vendor_id, vendorName FROM vendor_names WHERE vendor_id = ?",
+    [id],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+      if (!row) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(row);
+    }
+  );
+});
 // --- End of Vendor Name ---
 
 // --- Vendor items API ---

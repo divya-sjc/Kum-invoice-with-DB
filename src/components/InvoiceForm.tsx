@@ -29,9 +29,10 @@ function saveDeliveryAddress(address) {
 interface InvoiceFormProps {
   invoice?: Invoice;
   onSave?: (invoice: Invoice) => void;
+  vendorName?: string; 
 }
 
-export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
+export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -602,6 +603,10 @@ export const InvoiceForm = ({ invoice, onSave }: InvoiceFormProps) => {
                   required
                 >
                   <option value="">-- Select Vendor --</option>
+                  {/* Fallback for edit mode: show current vendor if not in vendors list, always at the top */}
+                  {formData.vendor_id && vendorName && !vendors.some(v => v.vendor_id === formData.vendor_id) && (
+                    <option value={formData.vendor_id}>{vendorName}</option>
+                  )}
                   {vendors.map(vendor => (
                     <option key={vendor.vendor_id} value={vendor.vendor_id}>
                       {vendor.vendorName}
