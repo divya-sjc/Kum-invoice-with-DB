@@ -335,7 +335,7 @@ app.get("/api/invoice-counts", (req, res) => {
   );
 });
 
-// GST Routes
+// veshad GST Routes
 app.get("/api/gst-collected", (req, res) => {
   const { month } = req.query;
   if (!month) {
@@ -395,6 +395,71 @@ app.get("/api/gst-collected-fy", (req, res) => {
         veshadCgst: row.veshadCgst || 0,
         veshadSgst: row.veshadSgst || 0,
         veshadIgst: row.veshadIgst || 0
+      });
+    }
+  );
+});
+
+// Gst collected route 
+app.get("/api/vendor/gst-collected", (req, res) => {
+  const { month } = req.query;
+  if (!month) {
+    return res.status(400).json({ error: "Month is required (format: yyyy-MM)" });
+  }
+
+  const startDate = `${month}-01`;
+  const endDate = `${month}-31`;
+  
+  db.get(
+    `SELECT 
+      IFNULL(SUM(cgst), 0) as cgst, 
+      IFNULL(SUM(sgst), 0) as sgst, 
+      IFNULL(SUM(igst), 0) as igst 
+    FROM vendors_invoices 
+    WHERE date(date) >= date(?) AND date(date) <= date(?)`,
+    [startDate, endDate],
+    (err, row) => {
+      if (err) {
+        console.error("GST summary error:", err);
+        return res.status(500).json({ error: "Failed to fetch GST summary" });
+      }
+      res.json({
+        cgst: row.cgst || 0,
+        sgst: row.sgst || 0,
+        igst: row.igst || 0
+      });
+    }
+  );
+});
+
+app.get("/api/vendor/gst-collected-fy", (req, res) => {
+  const now = new Date();
+  let fyStartYear = now.getFullYear();
+  let fyEndYear = now.getFullYear() + 1;
+  if (now.getMonth() + 1 < 4) {
+    fyStartYear = now.getFullYear() - 1;
+    fyEndYear = now.getFullYear();
+  }
+  const fyStart = `${fyStartYear}-04-01`;
+  const fyEnd = `${fyEndYear}-03-31`;
+
+  db.get(
+    `SELECT 
+      IFNULL(SUM(cgst), 0) as cgst, 
+      IFNULL(SUM(sgst), 0) as sgst, 
+      IFNULL(SUM(igst), 0) as igst 
+    FROM vendors_invoices 
+    WHERE date(date) >= date(?) AND date(date) <= date(?)`,
+    [fyStart, fyEnd],
+    (err, row) => {
+      if (err) {
+        console.error("GST FY summary error:", err);
+        return res.status(500).json({ error: "Failed to fetch GST FY summary" });
+      }
+      res.json({
+        cgst: row.cgst || 0,
+        sgst: row.sgst || 0,
+        igst: row.igst || 0
       });
     }
   );
