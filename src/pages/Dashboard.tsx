@@ -38,8 +38,8 @@ const Dashboard: React.FC = () => {
     if (activeTab === "bank") fetchBankBalances();
   }, [activeTab]);
   const [pending, setPending] = useState<any[]>([]);
-  const [gstMonth, setGstMonth] = useState<{cgst:number,sgst:number,igst:number}|null>(null);
-  const [gstFY, setGstFY] = useState<{cgst:number,sgst:number,igst:number}|null>(null);
+  const [gstMonth, setGstMonth] = useState<{veshadCgst:number,veshadSgst:number,veshadIgst:number}|null>(null);
+  const [gstFY, setGstFY] = useState<{veshadCgst:number,veshadSgst:number,veshadIgst:number}|null>(null);
   const [totalInvoices, setTotalInvoices] = useState(0);
   const [totalReceived, setTotalReceived] = useState(0);
   const [fy, setFy] = useState<string>("");
@@ -66,38 +66,61 @@ const Dashboard: React.FC = () => {
   }, []);
 
   // Fetch pending invoices (always up-to-date)
-  // Always fetch all invoices and filter for paymentStatus === 'Pending' based on up-to-date payment info
   const fetchPending = () => {
     fetch("/api/invoices")
       .then(r => r.json())
       .then(data => {
         // Consider invoice as paid if grandTotal - paymentReceived <= 0
-        setPending(data.filter((inv:any) => {
+        const pendingInvoices = data.filter((inv:any) => {
           const paid = (inv.grandTotal ?? 0) - (inv.paymentReceived ?? 0) <= 0;
           return !paid;
+        }).map((inv:any) => ({
+          ...inv,
+          balanceDue: (inv.grandTotal ?? 0) - (inv.paymentReceived ?? 0)
         }));
+        setPending(pendingInvoices);
       });
   };
 
   useEffect(() => {
+    // Only run if fy is set and valid
+    if (!fy || !fy.includes('-')) return;
     setLoading(true);
     fetchPending();
     // GST current month
     fetch(`/api/gst-collected?month=${currentMonth}`)
       .then(r => r.json())
-      .then(setGstMonth);
+      .then(setGstMonth)
+      .catch(() => setGstMonth(null));
     // GST till date (FY)
     fetch(`/api/gst-collected-fy`)
       .then(r => r.json())
-      .then(setGstFY);
+      .then(setGstFY)
+      .catch(() => setGstFY(null));
+    // Vendor GST current month
+    fetch(`/api/vendor/gst-collected?month=${currentMonth}`)
+      .then(r => r.json())
+      .then(setVendorGstMonth)
+      .catch(() => setVendorGstMonth(null));
+    // Vendor GST till date (FY)
+    fetch(`/api/vendor/gst-collected-fy`)
+      .then(r => r.json())
+      .then(setVendorGstFY)
+      .catch(() => setVendorGstFY(null));
     // Total invoices and received for FY
     fetch("/api/invoices")
       .then(r => r.json())
-      .then((data:any[]) => {
+      .then((data:any[] = []) => {
         // Filter for current FY
-        let fyStart = parseInt(fy.split('-')[0]);
-        let fyEnd = parseInt(fy.split('-')[1]);
+        let [fyStart, fyEnd] = fy.split('-').map(Number);
+        if (isNaN(fyStart) || isNaN(fyEnd)) {
+          setTotalInvoices(0);
+          setTotalReceived(0);
+          setLoading(false);
+          return;
+        }
         const invoicesFY = data.filter(inv => {
+          if (!inv.date) return false;
           const d = new Date(inv.date);
           const y = d.getFullYear();
           const m = d.getMonth()+1;
@@ -106,6 +129,11 @@ const Dashboard: React.FC = () => {
         });
         setTotalInvoices(invoicesFY.length);
         setTotalReceived(invoicesFY.reduce((sum, inv) => sum + (inv.paymentReceived ?? 0), 0));
+        setLoading(false);
+      })
+      .catch(() => {
+        setTotalInvoices(0);
+        setTotalReceived(0);
         setLoading(false);
       });
     // Auto-refresh pending invoices every 30s
@@ -118,7 +146,7 @@ const Dashboard: React.FC = () => {
     fetch("/api/vendors-invoices")
       .then(r => r.json())
       .then((data:any[]) => {
-        const months = Array.from(new Set(data.map((inv:any) => inv.date?.slice(0,7)))).filter(Boolean).sort((a,b)=>b.localeCompare(a));
+        const months = Array.from(new Set((data || []).map((inv:any) => inv.date?.slice(0,7)))).filter(Boolean).sort((a,b)=>b.localeCompare(a));
         setVendorMonths(months);
         setSelectedVendorMonth(months[0] || "");
       });
@@ -129,18 +157,20 @@ const Dashboard: React.FC = () => {
     if (!selectedVendorMonth) return;
     fetch(`/api/vendors-invoices/gst-itc?month=${selectedVendorMonth}`)
       .then(r => r.json())
-      .then(setVendorGstMonth);
+      .then(setVendorGstMonth)
+      .catch(() => setVendorGstMonth(null));
   }, [selectedVendorMonth]);
 
   // Fetch GST ITC for FY
   useEffect(() => {
     fetch(`/api/vendors-invoices/gst-itc-fy`)
       .then(r => r.json())
-      .then(setVendorGstFY);
+      .then(setVendorGstFY)
+      .catch(() => setVendorGstFY(null));
   }, []);
 
 
-  if (loading) return <div className="p-6">Loading dashboard...</div>;
+  if (loading || !fy || !fy.includes('-')) return <div className="p-6">Loading dashboard...</div>;
 
   return (
     <div className="p-6 space-y-6">
@@ -176,7 +206,7 @@ const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {pending.map(inv => (
+                    {(pending || []).map(inv => (
                       <tr key={inv.invoiceNumber}>
                         <td className="border px-2 py-1">{inv.invoiceNumber}</td>
                         <td className="border px-2 py-1">{inv.date}</td>
@@ -185,7 +215,7 @@ const Dashboard: React.FC = () => {
                         <td className="border px-2 py-1">₹{inv.balanceDue?.toLocaleString('en-IN')}</td>
                       </tr>
                     ))}
-                    {pending.length === 0 && <tr><td colSpan={5} className="text-center text-gray-500 py-2">No pending invoices</td></tr>}
+                    {(!pending || pending.length === 0) && <tr><td colSpan={5} className="text-center text-gray-500 py-2">No pending invoices</td></tr>}
                   </tbody>
                 </table>
               </CardContent>
@@ -197,9 +227,9 @@ const Dashboard: React.FC = () => {
                   <CardHeader><CardTitle>GST Collected (Current Month)</CardTitle></CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      <span>CGST: ₹{gstMonth?.cgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>SGST: ₹{gstMonth?.sgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>IGST: ₹{gstMonth?.igst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>CGST: ₹{gstMonth?.veshadCgst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>SGST: ₹{gstMonth?.veshadSgst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>IGST: ₹{gstMonth?.veshadIgst?.toLocaleString('en-IN') ?? '—'}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -212,9 +242,9 @@ const Dashboard: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      <span>CGST: ₹{gstFY?.cgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>SGST: ₹{gstFY?.sgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>IGST: ₹{gstFY?.igst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>CGST: ₹{gstFY?.veshadCgst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>SGST: ₹{gstFY?.veshadSgst?.toLocaleString('en-IN') ?? '—'}</span>
+                      <span>IGST: ₹{gstFY?.veshadIgst?.toLocaleString('en-IN') ?? '—'}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -230,7 +260,7 @@ const Dashboard: React.FC = () => {
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold">For Month:</span>
                         <select value={selectedVendorMonth} onChange={e => setSelectedVendorMonth(e.target.value)} className="border rounded px-2 py-1">
-                          {vendorMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                          {(vendorMonths || []).map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1">
@@ -278,13 +308,13 @@ const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {bankBalances.map(b => (
-                      <tr key={b.bank}>
-                        <td className="border px-2 py-1">{b.bank}</td>
-                        <td className="border px-2 py-1">₹{b.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    {bankBalances.map(row => (
+                      <tr key={row.bank}>
+                        <td className="px-2 py-1">{row.bank}</td>
+                        <td className={`text-right font-bold px-2 py-1 ${row.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{row.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
-                    {bankBalances.length === 0 && <tr><td colSpan={2} className="text-center text-gray-500 py-2">No data</td></tr>}
+                    {(!bankBalances || bankBalances.length === 0) && <tr><td colSpan={2} className="text-center text-gray-500 py-2">No data</td></tr>}
                   </tbody>
                 </table>
               )}
