@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Dashboard: React.FC = () => {
   // Bank Balances Tab State
-  const [bankBalances, setBankBalances] = useState<{ bank: string; balance: number }[]>([]);
+  const [bankBalances, setBankBalances] = useState<{ bank: string; credit: number; debit: number; balance: number }[]>([]);
   const [bankBalancesLoading, setBankBalancesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("main");
   // Fetch and aggregate purchases for Bank Balances
@@ -12,17 +12,22 @@ const Dashboard: React.FC = () => {
     setBankBalancesLoading(true);
     try {
       const res = await fetch("/api/purchases");
-      const purchases = await res.json();
-      // Aggregate by refBankName
-      const bankMap: Record<string, number> = {};
+      const json = await res.json();
+      const purchases = Array.isArray(json) ? json : (json.data || []);
+      // Aggregate by refBankName: sum credit and debit, then compute balance
+      const bankMap: Record<string, { credit: number; debit: number }> = {};
       purchases.forEach((p: any) => {
         const bank = p.refBankName || "(No Bank)";
-        const credit = Number(p.credit) || 0;
-        const debit = Number(p.debit) || 0;
-        if (!bankMap[bank]) bankMap[bank] = 0;
-        bankMap[bank] += credit - debit;
+        if (!bankMap[bank]) bankMap[bank] = { credit: 0, debit: 0 };
+        bankMap[bank].credit += Number(p.credit) || 0;
+        bankMap[bank].debit += Number(p.debit) || 0;
       });
-      const summary = Object.entries(bankMap).map(([bank, balance]) => ({ bank, balance }));
+      const summary = Object.entries(bankMap).map(([bank, { credit, debit }]) => ({
+        bank,
+        credit,
+        debit,
+        balance: credit - debit
+      }));
       setBankBalances(summary);
       localStorage.setItem("bankBalancesSummary", JSON.stringify(summary));
     } catch {
@@ -300,21 +305,25 @@ const Dashboard: React.FC = () => {
               {bankBalancesLoading ? (
                 <div>Loading bank balances...</div>
               ) : (
-                <table className="min-w-full border text-sm">
+                <table className="border text-sm">
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border px-2 py-1">Bank Name</th>
-                      <th className="border px-2 py-1">Balance</th>
+                      {/* <th className="border px-2 py-1 text-right">Total Credit</th>
+                      <th className="border px-2 py-1 text-right">Total Debit</th> */}
+                      <th className="border px-2 py-1 text-right">Balance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bankBalances.map(row => (
                       <tr key={row.bank}>
                         <td className="px-2 py-1">{row.bank}</td>
+                        {/* <td className="text-right px-2 py-1">₹{row.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="text-right px-2 py-1">₹{row.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td> */}
                         <td className={`text-right font-bold px-2 py-1 ${row.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{row.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
-                    {(!bankBalances || bankBalances.length === 0) && <tr><td colSpan={2} className="text-center text-gray-500 py-2">No data</td></tr>}
+                    {(!bankBalances || bankBalances.length === 0) && <tr><td colSpan={4} className="text-center text-gray-500 py-2">No data</td></tr>}
                   </tbody>
                 </table>
               )}
