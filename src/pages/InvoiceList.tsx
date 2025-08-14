@@ -319,15 +319,18 @@ const InvoiceList = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
+          <Suspense fallback={<div className="animate-pulse bg-gray-200 rounded h-12 w-56"></div>}>
+            <InvoiceStatusTab />
+          </Suspense>
           <SidebarTrigger />
           <h1 className="text-3xl font-bold text-gray-900">All Invoices</h1>
         </div>
         <div className="flex flex-col gap-2">
-          <Suspense fallback={<div className="animate-pulse bg-gray-200 rounded h-12 w-56"></div>}>
-            <InvoiceStatusTab />
-          </Suspense>
           <div className="text-right">
             <div className="text-xl font-semibold text-blue-800">
+              Total Profit: ₹{invoices.reduce((sum, inv) => sum + ((inv.profitPercent ?? 0) || 0), 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-sm font-medium text-green-800">
               Total Invoiced: ₹{invoices.reduce((sum, inv) => sum + ((inv.grandTotal ?? 0) || 0), 0).toLocaleString('en-IN')}
             </div>
             <div className="text-sm font-medium text-green-800">
@@ -443,10 +446,14 @@ const InvoiceList = () => {
               {/* Row 2: Payment info block, compact */}
               <div className="flex flex-wrap items-center justify-between gap-2 w-full mt-1 bg-blue-50 rounded border border-blue-100 p-1">
                 <span className="text-xs text-gray-500">Bank: <span className="font-medium text-gray-700">{invoice.paymentBank || '-'}</span></span>
-                <span className="text-xs text-gray-500">Ref ID: <span className="font-medium text-gray-700">{invoice.paymentBankRef || '-'}</span></span>
+                <span className="text-xs text-gray-500">Ref ID: <span
+                  className="font-medium text-gray-700 inline-block max-w-[120px] truncate align-middle cursor-pointer"
+                  title={invoice.paymentBankRef || '-'}
+                >{invoice.paymentBankRef || '-'}</span></span>
                 <span className="text-xs text-gray-500">Status: {(invoice.grandTotal - (invoice.paymentReceived ?? 0)) !== 0 ? (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700">Pending</span>) : (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-700">Paid Fully</span>)}</span>
                 <span className="text-xs text-gray-500">Received: <span className="font-medium text-gray-700">₹{(invoice.paymentReceived ?? 0).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Due: <span className="font-medium text-gray-700">₹{((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)).toLocaleString('en-IN')}</span></span>
+                <span className="text-xs text-gray-500">Profit: <span className="font-medium text-gray-700">₹{(invoice.profitPercent ?? 0).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Payment Recvd Date: <span className="font-medium text-gray-700">{invoice.paymentDate ? format(new Date(invoice.paymentDate), 'dd-MMM-yyyy') : '-'}</span></span>
                 {invoice.notes && (
                   <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.notes}</span></span>
