@@ -41,9 +41,9 @@ type Purchase = {
  paymentRemarks?: string;
  refBankName?: string;
  invoiceNo?: string;
- inputCgst?: string;
- inputSgst?: string;
- inputIgst?: string;
+ inputCgst?: number | string;
+ inputSgst?:  number | string;
+ inputIgst?: number | string;
  created_at?: string;
 };
 
@@ -259,7 +259,7 @@ const months = Array.from(
 
     try {
       setIsSaving(true);
-      const dataToSend: Purchase = {
+      const dataToSend = {
         ...editData,
         date: formatDateDDMMMYYYY(editData.date),
         credit: editData.credit,
@@ -299,6 +299,12 @@ const months = Array.from(
     }
   };
 
+  function formatForInput(dateString: string) {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return ""; // if invalid date
+  return d.toISOString().split("T")[0]; // yyyy-mm-dd
+}
+
   const handleInputChange = (field: keyof Purchase, value: string) => {
     if (!editData) return;
 
@@ -319,6 +325,36 @@ const months = Array.from(
     setIsAdding(true);
     setEditData(emptyPurchase);
   };
+
+
+ async function handleAddNew() {
+  try {
+    const res = await fetch("http://localhost:4000/api/purchases/max-slno");
+    const data = await res.json();
+    const nextSlNo = (data.maxSlNo || 0) + 1;
+
+    setEditData({
+      slNo: String(nextSlNo), // auto-filled
+      date: "",
+      description: "",
+      credit: null,
+      debit: null,
+      bankPaymentRef: "",
+      clientName: "",
+      paymentRemarks: "",
+      refBankName: "",
+      invoiceNo: "",
+      inputCgst: 0,
+      inputSgst: 0,
+      inputIgst: 0,
+    });
+    setEditingId(null);
+    setIsAdding(true);
+  } catch (err) {
+    console.error("Failed to fetch max slNo:", err);
+  }
+}
+
 
  const getSortedPurchases = () => {
    const sorted = [...purchases];
@@ -550,7 +586,7 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
 
 
        <div className="flex flex-wrap gap-2">
-         <Button className="bg-black text-white hover:bg-gray-800" onClick={() => { setIsAdding(true); setEditData(emptyPurchase); setEditingId(null); }}>
+         <Button className="bg-black text-white hover:bg-gray-800" onClick={handleAddNew}>
            <PlusIcon className="w-4 h-4 mr-1" /> Add Transaction
          </Button>
 
@@ -567,7 +603,7 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
              id="file-upload"
              disabled={uploading}
            />
-         <Button
+         {/* <Button
              asChild
              disabled={uploading}
            >
@@ -584,7 +620,7 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
                  </>
                )}
              </label>
-           </Button>
+           </Button> */}
          </div>
          <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleBatchDelete} disabled={selectedRows.length === 0}>
            <TrashIcon className="w-4 h-4 mr-2" /> Delete
@@ -710,17 +746,17 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
                 <td className="border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>{p.slNo}</td>
                 <td className="border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>{formatDateDDMMMYYYY(p.date)}</td>
                 <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.description}</td>
-                <td className="text-right border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
+                <td className="text-left border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
                   {p.credit?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
-                <td className="text-right border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
+                <td className="text-left border border-black"  align="center" onDoubleClick={() => handleEdit(p)}>
                   {p.debit?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
                 <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.bankPaymentRef}</td>
                 <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.clientName}</td>
                 <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.paymentRemarks}</td>
-                <td className="border border-black" onDoubleClick={() => handleEdit(p)}>{p.refBankName}</td>
-                <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.invoiceNo}</td>
+                <td className="text-center border border-black" onDoubleClick={() => handleEdit(p)}>{p.refBankName}</td>
+                <td className="text-left border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.invoiceNo}</td>
                 <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputCgst}</td>
                 <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputSgst}</td>
                 <td className="border border-black" align="center" onDoubleClick={() => handleEdit(p)}>{p.inputIgst}</td>
@@ -753,7 +789,7 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
                   <Input className="h-7 text-xs" value={editData.slNo} onChange={e => setEditData({ ...editData, slNo: e.target.value })} />
                 </label>
                 <label className="text-xs flex flex-col">Date
-                  <Input className="h-7 text-xs" type="text" value={editData.date} onChange={e => setEditData({ ...editData, date: e.target.value })} />
+                  <Input className="h-7 text-xs" type="date" value={formatForInput(editData.date)} onChange={e => setEditData({ ...editData, date: e.target.value })} />
                 </label>
                 <label className="text-xs flex flex-col col-span-2">Description
                   <Textarea className="min-h-[40px] text-xs" value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} />

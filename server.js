@@ -743,8 +743,20 @@ const validatePurchaseData = (data) => {
   return errors;
 };
 
-// 
-//  Routes
+// Purchase APIs
+// get the highest slNo from purchases
+app.get("/api/purchases/max-slno", (req, res) => {
+  db.get("SELECT MAX(CAST(slNo AS INTEGER)) as maxSlNo FROM purchases", [], (err, row) => {
+    if (err) {
+      console.error("Error fetching max slNo:", err);
+      return res.status(500).json({ error: "Failed to fetch max slNo", details: err.message });
+    }
+    res.json({ maxSlNo: row?.maxSlNo || 0 });
+  });
+});
+
+
+//  Get all purchases from the database
 app.get("/api/purchases", async (req, res) => {
   console.log('Fetching all purchases...');
   
