@@ -120,7 +120,11 @@ const EditInvoice = () => {
       // Attach profitPercent before saving
       const finalInvoice = {
         ...updatedInvoice,
-        profitPercent: Number(profitValue.toFixed(2))
+        profitPercent: Number(profitValue.toFixed(2)),
+        paymentStatus:
+        (updatedInvoice.grandTotal ?? 0) - (updatedInvoice.paymentReceived ?? 0) === 0
+          ? ("Paid" as const)
+          : ("Pending" as const),
       };
 
     setCurrentInvoice(finalInvoice);
