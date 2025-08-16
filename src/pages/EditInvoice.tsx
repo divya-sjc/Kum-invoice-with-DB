@@ -82,15 +82,49 @@ const EditInvoice = () => {
   if (loading) return <div>Loading...</div>;
   if (!currentInvoice) return <Navigate to="/invoices" replace />;
 
-  const handleInvoiceUpdate = (updatedInvoice: Invoice) => {
-    setCurrentInvoice(updatedInvoice);
-    updateInvoiceInDatabase(updatedInvoice);
-  };
+  
+  async function handleUpdateInvoice(updatedInvoice: Invoice): Promise<void> {
+      let profitValue = 0;
+      try {
+        if (updatedInvoice.vendor_id && updatedInvoice.items.length > 0) {
+          const vendorItemsRes = await fetch(`http://localhost:4000/api/vendor-items/vendor/${updatedInvoice.vendor_id}`);
+          if (vendorItemsRes.ok) {
+            const vendorItems = await vendorItemsRes.json();
 
-  function handleUpdateInvoice(updatedInvoice: Invoice): void {
-    // Always update with the full invoice object, including items
-    setCurrentInvoice(updatedInvoice);
-    updateInvoiceInDatabase(updatedInvoice);
+            let aggregateCost = 0;
+            let invoiceTotal = 0;
+
+            updatedInvoice.items.forEach(invoiceItem => {
+              const vendorItem = vendorItems.find((vi: any) =>
+                vi.itemName &&
+                invoiceItem.item_description &&
+                vi.itemName.trim().toLowerCase() === invoiceItem.item_description.trim().toLowerCase()
+              );
+              if (vendorItem) {
+                const actualCost = Number(vendorItem.pricePerUnit) * Number(invoiceItem.quantity);
+                aggregateCost += actualCost;
+
+                const invoicePrice = Number(invoiceItem.unitPrice) * Number(invoiceItem.quantity);
+                invoiceTotal += invoicePrice;
+              }
+            });
+
+            profitValue = invoiceTotal - aggregateCost;
+          }
+        }
+      } catch (err) {
+        console.error("Profit calculation failed in EditInvoice:", err);
+        profitValue = 0;
+      }
+
+      // Attach profitPercent before saving
+      const finalInvoice = {
+        ...updatedInvoice,
+        profitPercent: Number(profitValue.toFixed(2))
+      };
+
+    setCurrentInvoice(finalInvoice);
+    updateInvoiceInDatabase(finalInvoice);
   }
 
   return (

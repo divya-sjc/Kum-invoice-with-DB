@@ -40,6 +40,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<Invoice | null>(null);
   const [vendors, setVendors] = useState<{ vendor_id: number; vendorName: string }[]>([]);
+  const [vendorItemsList, setVendorItemsList] = useState<{ itemName: string }[]>([]);
 
   // Fetch invoice number if creating new
   useEffect(() => {
@@ -117,6 +118,17 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
   setSavedAddresses(getSavedDeliveryAddresses());
 }, [invoice]);
 
+  // Fetch vendor items when vendor_id changes (vendor_id is set from vendor dropdown)
+  useEffect(() => {
+    if (formData?.vendor_id) {
+      fetch(`http://localhost:4000/api/vendor-items/vendor/${formData.vendor_id}`)
+        .then(res => res.json())
+        .then(data => setVendorItemsList(Array.isArray(data) ? data : []))
+        .catch(() => setVendorItemsList([]));
+    } else {
+      setVendorItemsList([]);
+    }
+  }, [formData?.vendor_id]);
 
   // Calculate totals whenever items or deliveryAddress_state change
   useEffect(() => {
@@ -227,6 +239,47 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       });
       return;
     }
+
+    // --- PROFIT CALCULATION LOGIC START ---
+    let profitValue = 0;
+    try {
+      if (formData.vendor_id && formData.items.length > 0) {
+        const vendorItemsRes = await fetch(`http://localhost:4000/api/vendor-items/vendor/${formData.vendor_id}`);
+        if (vendorItemsRes.ok) {
+          const vendorItems = await vendorItemsRes.json();
+
+          let aggregateCost = 0;
+          let invoiceTotal = 0;
+
+          formData.items.forEach(invoiceItem => {
+            const vendorItem = vendorItems.find((vi: any) =>
+              vi.itemName &&
+              invoiceItem.item_description &&
+              vi.itemName.trim().toLowerCase() === invoiceItem.item_description.trim().toLowerCase()
+            );
+
+            if (vendorItem) {
+              // Use pricePerUnit directly
+              const actualCost = Number(vendorItem.pricePerUnit) * Number(invoiceItem.quantity);
+              aggregateCost += actualCost;
+
+              const invoicePrice = Number(invoiceItem.unitPrice) * Number(invoiceItem.quantity);
+              invoiceTotal += invoicePrice;
+            } else {
+              console.warn("No match found for:", invoiceItem.item_description);
+            }
+          });
+
+          profitValue = invoiceTotal - aggregateCost;
+          console.log("Aggregate cost:", aggregateCost, "Invoice total:", invoiceTotal, "Profit:", profitValue);
+        }
+      }
+    } catch (err) {
+      console.error("Profit calculation failed:", err);
+      profitValue = 0;
+    }
+    // --- PROFIT CALCULATION LOGIC END ---
+
     // Add payment info and status to invoice
     const paymentReceived = formData.paymentReceived;
     const grandTotal = parseFloat(formData.grandTotal.toFixed(2));
@@ -262,7 +315,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       paymentStatus: (formData.grandTotal - formData.paymentReceived) <= 0 ? 'Paid' : 'Pending',
       notes: formData.notes || '',
       vendor_id: formData.vendor_id || null,
-      profitPercent: formData.profitPercent || 0,
+      profitPercent: Number(profitValue.toFixed(2)),
       manualEntryLabel: formData.manualEntryLabel || '',
       manualEntryAmount: formData.manualEntryAmount || 0,
       manualEntrySign: formData.manualEntrySign || 1,
@@ -404,6 +457,12 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
   }
+
+  // When vendor dropdown changes, set vendor_id based on selected value
+  const handleVendorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = Number(e.target.value);
+    setFormData(prev => prev && ({ ...prev, vendor_id: selectedId }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -596,10 +655,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
                   id="vendorName"
                   className="border rounded px-2 py-1 w-full"
                   value={formData.vendor_id || ""}
-                  onChange={e => {
-                    const selectedId = Number(e.target.value);
-                    setFormData(prev => prev && ({ ...prev, vendor_id: selectedId }));
-                  }}
+                  onChange={handleVendorChange}
                   required
                 >
                   <option value="">-- Select Vendor --</option>
@@ -644,17 +700,31 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
               Total
             </div>
           </div>
-          
           <div className="space-y-4">
             {formData.items.map((item, index) => (
               <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg">
                 <div className="md:col-span-3">
-                  <Input
-                    id={`description-${index}`}
-                    value={item.item_description}
-                    onChange={(e) => handleItemChange(index, 'item_description', e.target.value)}
-                    placeholder="Enter item description"
-                  />
+                  {/* Dropdown for vendor_items if vendor_id is selected */}
+                  {formData.vendor_id && vendorItemsList && vendorItemsList.length > 0 ? (
+                    <select
+                      id={`description-${index}`}
+                      value={item.item_description}
+                      onChange={e => handleItemChange(index, 'item_description', e.target.value)}
+                      className="border rounded px-2 py-1 w-full"
+                    >
+                      <option value="">-- Select Item --</option>
+                      {vendorItemsList.filter(vi => vi.itemName && vi.itemName.trim() !== "").map((vi, idx) => (
+                        <option key={idx} value={vi.itemName}>{vi.itemName}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      id={`description-${index}`}
+                      value={item.item_description}
+                      onChange={e => handleItemChange(index, 'item_description', e.target.value)}
+                      placeholder="Enter item description"
+                    />
+                  )}
                 </div>
                 <div>
                   <Input
