@@ -1848,6 +1848,18 @@ app.get("/api/vendor-items", (req, res) => {
   });
 });
 
+// Get all vendor items with given vendor_id
+app.get("/api/vendor-items/vendor/:vid", (req, res) => {
+  const vid = req.params.vid;
+  db.all("SELECT * FROM vendor_items where vendor_id=?", [vid], (err, rows) => {
+    if (err) {
+      console.error("Error fetching vendor invoices:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+    }
+    res.json(rows);
+  });
+});
+
 // Get all vendor items with given invoice no
 app.get("/api/vendor-items/:id", (req, res) => {
   db.all("SELECT * FROM vendor_items where vinvoice_id=?", [id], (err, rows) => {
