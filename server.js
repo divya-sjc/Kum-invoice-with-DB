@@ -86,12 +86,32 @@ db.serialize(() => {
   // Create all tables if they don't exist
 
   // Price Comparison table
-  db.run(`CREATE TABLE IF NOT EXISTS price_comparision (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    vendors TEXT,
-    items TEXT,
-    selected TEXT
+  db.run(`CREATE TABLE IF NOT EXISTS price_comparison_tables (
+    table_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS price_comparison_vendors (
+    vendor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_id INTEGER REFERENCES price_comparison_tables(table_id) ON DELETE CASCADE,
+    vendor_name TEXT NOT NULL,
+    vendor_contact TEXT DEFAULT ''
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS price_comparison_items (
+    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_id INTEGER REFERENCES price_comparison_tables(table_id) ON DELETE CASCADE,
+    item_name TEXT NOT NULL,
+    item_description TEXT DEFAULT ''
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS price_comparison_quotes (
+    quote_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_id INTEGER REFERENCES price_comparison_tables(table_id) ON DELETE CASCADE,
+    item_id INTEGER REFERENCES price_comparison_items(item_id) ON DELETE CASCADE,
+    vendor_id INTEGER REFERENCES price_comparison_vendors(vendor_id) ON DELETE CASCADE,
+    price REAL DEFAULT 0
   )`);
 
   // Purchases table
@@ -2015,6 +2035,135 @@ app.delete("/api/letters/:id", (req, res) => {
 
 
 // --- End of Lettet End Points ---
+
+
+// --- End points for price comparison ---
+
+// 1. Get all tables (latest first)
+app.get("/api/price-comparison/tables", (req, res) => {
+  db.all(`SELECT * FROM price_comparison_tables ORDER BY created_at DESC`, [], (err, rows) => {
+    if (err) {
+      console.error("Error fetching tables:", err);
+      return res.status(500).json({ error: "Failed to fetch tables" });
+    }
+    res.json(rows);
+  });
+});
+
+// 2. Get full details of a table (vendors, items, quotes)
+app.get("/api/price-comparison/tables/:id", (req, res) => {
+  const tableId = req.params.id;
+
+  const result = { vendors: [], items: [], quotes: [] };
+
+  db.all(`SELECT * FROM price_comparison_vendors WHERE table_id = ?`, [tableId], (err, vendors) => {
+    if (err) return res.status(500).json({ error: err.message });
+    result.vendors = vendors;
+
+    db.all(`SELECT * FROM price_comparison_items WHERE table_id = ?`, [tableId], (err, items) => {
+      if (err) return res.status(500).json({ error: err.message });
+      result.items = items;
+
+      db.all(`SELECT * FROM price_comparison_quotes WHERE table_id = ?`, [tableId], (err, quotes) => {
+        if (err) return res.status(500).json({ error: err.message });
+        result.quotes = quotes;
+
+        res.json(result);
+      });
+    });
+  });
+});
+
+
+// 3. Create a new table
+app.post("/api/price-comparison/tables", (req, res) => {
+  const { title } = req.body;
+  if (!title) return res.status(400).json({ error: "Title is required" });
+
+  db.run(`INSERT INTO price_comparison_tables (title) VALUES (?)`, [title], function (err) {
+    if (err) {
+      console.error("Error creating table:", err);
+      return res.status(500).json({ error: "Failed to create table" });
+    }
+    res.status(201).json({ table_id: this.lastID, title });
+  });
+});
+
+
+// 4. Add vendors to a table
+app.post("/api/price-comparison/:id/vendors", (req, res) => {
+  const tableId = req.params.id;
+  const vendors = req.body; // expect array [{vendor_name:"..."}]
+
+  const stmt = db.prepare(`INSERT INTO price_comparison_vendors (table_id, vendor_name, vendor_contact) VALUES (?, ?, ?)`);
+
+  vendors.forEach(v => {
+    stmt.run([tableId, v.vendor_name]);
+  });
+
+  stmt.finalize(err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Vendors added successfully" });
+  });
+});
+
+
+// 5. Add items to a table
+app.post("/api/price-comparison/:id/items", (req, res) => {
+  const tableId = req.params.id;
+  const items = req.body; // expect array [{item_name:"..."}]
+
+  const stmt = db.prepare(`INSERT INTO price_comparison_items (table_id, item_name, item_description) VALUES (?, ?, ?)`);
+
+  items.forEach(i => {
+    stmt.run([tableId, i.item_name]);
+  });
+
+  stmt.finalize(err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Items added successfully" });
+  });
+});
+
+
+// 6. Save or update a quote
+app.post("/api/price-comparison/:id/quotes", (req, res) => {
+  const tableId = req.params.id;
+  const { item_id, vendor_id, price } = req.body;
+
+  // check if already exists
+  db.get(
+    `SELECT * FROM price_comparison_quotes WHERE table_id = ? AND item_id = ? AND vendor_id = ?`,
+    [tableId, item_id, vendor_id],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (row) {
+        // update
+        db.run(
+          `UPDATE price_comparison_quotes SET price = ? WHERE quote_id = ?`,
+          [price, row.quote_id],
+          function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "Quote updated", quote_id: row.quote_id, price });
+          }
+        );
+      } else {
+        // insert
+        db.run(
+          `INSERT INTO price_comparison_quotes (table_id, item_id, vendor_id, price) VALUES (?, ?, ?, ?)`,
+          [tableId, item_id, vendor_id, price],
+          function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "Quote inserted", quote_id: this.lastID, price });
+          }
+        );
+      }
+    }
+  );
+});
+
+// --- End of price comparison End Points ---
 
 // Start server
 app.listen(PORT, () => {
