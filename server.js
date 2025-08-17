@@ -2098,7 +2098,7 @@ app.post("/api/price-comparison/:id/vendors", (req, res) => {
   const stmt = db.prepare(`INSERT INTO price_comparison_vendors (table_id, vendor_name, vendor_contact) VALUES (?, ?, ?)`);
 
   vendors.forEach(v => {
-    stmt.run([tableId, v.vendor_name]);
+    stmt.run([tableId, v.vendor_name, v.vendor_contact || null]);
   });
 
   stmt.finalize(err => {
@@ -2116,7 +2116,7 @@ app.post("/api/price-comparison/:id/items", (req, res) => {
   const stmt = db.prepare(`INSERT INTO price_comparison_items (table_id, item_name, item_description) VALUES (?, ?, ?)`);
 
   items.forEach(i => {
-    stmt.run([tableId, i.item_name]);
+    stmt.run([tableId, i.item_name, i.item_description || null]);
   });
 
   stmt.finalize(err => {
@@ -2161,6 +2161,79 @@ app.post("/api/price-comparison/:id/quotes", (req, res) => {
       }
     }
   );
+});
+
+// delete a price comparison table and all related data
+app.delete("/api/price-comparison/tables/:id", (req, res) => {
+  const tableId = req.params.id;
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+    db.run(
+      `DELETE FROM price_comparison_quotes 
+       WHERE item_id IN (SELECT item_id FROM price_comparison_items WHERE table_id = ?)
+          OR vendor_id IN (SELECT vendor_id FROM price_comparison_vendors WHERE table_id = ?)`,
+      [tableId, tableId],
+      function (err) {
+        if (err) {
+          db.run("ROLLBACK");
+          console.error("Error deleting quotes:", err);
+          return res.status(500).json({ error: err.message });
+        }
+        db.run(
+          `DELETE FROM price_comparison_items WHERE table_id = ?`,
+          [tableId],
+          function (err) {
+            if (err) {
+              db.run("ROLLBACK");
+              console.error("Error deleting items:", err);
+              return res.status(500).json({ error: err.message });
+            }
+            db.run(
+              `DELETE FROM price_comparison_vendors WHERE table_id = ?`,
+              [tableId],
+              function (err) {
+                if (err) {
+                  db.run("ROLLBACK");
+                  console.error("Error deleting vendors:", err);
+                  return res.status(500).json({ error: err.message });
+                }
+                db.run(
+                  `DELETE FROM price_comparison_tables WHERE table_id = ?`,
+                  [tableId],
+                  function (err) {
+                    if (err) {
+                      db.run("ROLLBACK");
+                      console.error("Error deleting table:", err);
+                      return res.status(500).json({ error: err.message });
+                    }
+                    db.run("COMMIT");
+                    res.json({ message: "Table and all related data deleted", changes: this.changes });
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+// Delete a vendor
+app.delete("/api/price-comparison/vendors/:id", (req, res) => {
+  db.run(`DELETE FROM price_comparison_vendors WHERE vendor_id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Vendor deleted", changes: this.changes });
+  });
+});
+
+// Delete an item
+app.delete("/api/price-comparison/items/:id", (req, res) => {
+  db.run(`DELETE FROM price_comparison_items WHERE item_id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Item deleted", changes: this.changes });
+  });
 });
 
 // --- End of price comparison End Points ---

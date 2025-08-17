@@ -95,10 +95,20 @@ export default function PriceComparison() {
     // refresh table
     const res = await fetch(`/api/price-comparison/tables/${activeTableId}`);
     const details = await res.json();
+    const vendorList = details.vendors || [];
+    const itemList = (details.items || []).map((item: any) => {
+      const prices = vendorList.map((v: any) => {
+        const q = details.quotes.find(
+          (qt: any) => qt.item_id === item.item_id && qt.vendor_id === v.vendor_id
+        );
+        return q ? String(q.price) : "";
+      });
+      return { ...item, prices };
+    });
     setTables(prev =>
       prev.map(tbl =>
         tbl.table_id === activeTableId
-          ? { ...tbl, vendors: details.vendors }
+          ? { ...tbl, vendors: vendorList, items: itemList }
           : tbl
       )
     );
@@ -172,17 +182,95 @@ export default function PriceComparison() {
     });
   };
 
+  // Delete a whole table
+const handleDeleteTable = async (tableId: number) => {
+  if (!confirm("Are you sure you want to delete this table?")) return;
+  const res = await fetch(`/api/price-comparison/tables/${tableId}`, { method: "DELETE" });
+  if (!res.ok) {
+    alert("Failed to delete table. Please try again.");
+    return;
+  }
+  setTables(prev => prev.filter(t => t.table_id !== tableId));
+  if (activeTableId === tableId) {
+    setShowVendorModal(false);
+    setShowItemModal(false);
+    setActiveTableId(null);
+  }
+};
+
+// Delete a vendor
+const handleDeleteVendor = async (tableId: number, vendorId: number) => {
+  if (!confirm("Are you sure you want to delete this vendor?")) return;
+  await fetch(`/api/price-comparison/vendors/${vendorId}`, { method: "DELETE" });
+
+  // Refresh table
+  const res = await fetch(`/api/price-comparison/tables/${tableId}`);
+  const details = await res.json();
+  const vendorList = details.vendors || [];
+  const itemList = (details.items || []).map((item: any) => {
+    const prices = vendorList.map((v: any) => {
+      const q = details.quotes.find(
+        (qt: any) => qt.item_id === item.item_id && qt.vendor_id === v.vendor_id
+      );
+      return q ? String(q.price) : "";
+    });
+    return { ...item, prices };
+  });
+  setTables(prev =>
+    prev.map(tbl =>
+      tbl.table_id === tableId
+        ? { ...tbl, vendors: vendorList, items: itemList }
+        : tbl
+    )
+  );
+};
+
+// Delete an item
+const handleDeleteItem = async (tableId: number, itemId: number) => {
+  if (!confirm("Are you sure you want to delete this item?")) return;
+  await fetch(`/api/price-comparison/items/${itemId}`, { method: "DELETE" });
+
+  // Refresh table
+  const res = await fetch(`/api/price-comparison/tables/${tableId}`);
+  const details = await res.json();
+  const vendorList = details.vendors || [];
+  const itemList = (details.items || []).map((item: any) => {
+    const prices = vendorList.map((v: any) => {
+      const q = details.quotes.find(
+        (qt: any) => qt.item_id === item.item_id && qt.vendor_id === v.vendor_id
+      );
+      return q ? String(q.price) : "";
+    });
+    return { ...item, prices };
+  });
+  setTables(prev =>
+    prev.map(tbl =>
+      tbl.table_id === tableId
+        ? { ...tbl, vendors: vendorList, items: itemList }
+        : tbl
+    )
+  );
+};
+
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Price Comparison</h1>
       <Button onClick={handleAddTable} className="mb-6">
         <PlusIcon className="w-4 h-4 mr-1" /> New Table
       </Button>
-
+      
       {tables.map(table => (
         <div key={table.table_id} className="mb-8 border rounded p-4 bg-white">
           <h2 className="font-bold mb-3">{table.title}</h2>
           <div className="flex gap-2 mb-4">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteTable(table.table_id)}
+            >
+              <TrashIcon className="w-4 h-4 mr-1" /> Delete Table
+            </Button>
             <Button
               onClick={() => {
                 setActiveTableId(table.table_id);
@@ -205,7 +293,13 @@ export default function PriceComparison() {
               <TableRow>
                 <TableHead>Item</TableHead>
                 {table.vendors.map(v => (
-                  <TableHead key={v.vendor_id}>{v.vendor_name}</TableHead>
+                  <TableHead key={v.vendor_id} className="items-center gap-1">
+                    <span>{v.vendor_name}</span>
+                    <TrashIcon
+                      className="w-4 h-4 text-red-500 cursor-pointer"
+                      onClick={() => handleDeleteVendor(table.table_id, v.vendor_id)}
+                    />
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -215,7 +309,13 @@ export default function PriceComparison() {
                 const minPrice = numericPrices.length ? Math.min(...numericPrices) : null;
                 return (
                   <TableRow key={item.item_id}>
-                    <TableCell>{item.item_name}</TableCell>
+                    <TableCell className="flex items-center gap-1">
+                      {item.item_name}
+                      <TrashIcon
+                        className="w-4 h-4 text-red-500 cursor-pointer"
+                        onClick={() => handleDeleteItem(table.table_id, item.item_id)}
+                      />
+                    </TableCell>
                     {item.prices.map((p, j) => {
                       const priceNum = parseFloat(p);
                       const isMin = !isNaN(priceNum) && minPrice !== null && priceNum === minPrice;
