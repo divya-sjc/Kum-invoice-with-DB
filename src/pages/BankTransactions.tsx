@@ -84,12 +84,14 @@ export default function BankTransactions() {
     invoiceMap[invoice].credit += p.credit || 0;
     invoiceMap[invoice].debit += p.debit || 0;
   });
-  const invoiceRows = Object.entries(invoiceMap).map(([invoice, { credit, debit }]) => ({
+  const invoiceRows = Object.entries(invoiceMap)
+  .map(([invoice, { credit, debit }]) => ({
     invoice,
     credit,
     debit,
     balance: credit - debit,
-  }));
+  }))
+  .sort((a, b) => a.invoice.toLowerCase().localeCompare(b.invoice.toLowerCase()));
 
   // Calculate totals for balances
   const totalInvoiceBalance = invoiceRows.reduce((sum, row) => sum + row.balance, 0);
