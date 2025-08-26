@@ -1074,6 +1074,10 @@ app.put("/api/invoices/:invoiceNumber", (req, res) => {
     veshadIgst, grandTotal, amountInWords, paymentReceived, paymentBank, paymentBankRef, paymentDate, balanceDue, paymentStatus, notes,
     vendor_id, profitPercent, items } = req.body;
 
+  if (Array.isArray(vendor_id)) {
+    vendor_id = vendor_id.join(",");
+  }
+
   db.run(
     "UPDATE invoices SET date=?, revision=?, deliveryAddress_name=?, deliveryAddress_address=?, deliveryAddress_city=?, deliveryAddress_postalCode=?, deliveryAddress_state=?, deliveryDate=?, deliveryChallanRef=?, hsnSac=?, poRefNo=?, ewayBillRef=?, invoiceTotal=?, totalNet=?, veshadCgst=?, veshadSgst=?, veshadIgst=?, grandTotal=?, amountInWords=?, paymentReceived=?, paymentBank=?, paymentBankRef=?, paymentDate=?, balanceDue=?, paymentStatus=?, notes=?, vendor_id=?, profitPercent=? WHERE invoiceNumber = ?",
     [date, revision, deliveryAddress_name, deliveryAddress_address, deliveryAddress_city, deliveryAddress_postalCode,
@@ -1483,6 +1487,10 @@ app.post("/api/invoices", (req, res) => {
         details: `Invoice with number ${invoiceNumber} already exists`
       });
     }
+    let vendor_id = req.body.vendor_id;
+    if (Array.isArray(vendor_id)) {
+      vendor_id = vendor_id.join(","); // store as "1,2,5"
+    }
 
     // Insert the invoice - only using columns that exist in the table
     const insertInvoiceQuery = `
@@ -1847,24 +1855,28 @@ app.get("/api/vendor-names/by-name", (req, res) => {
 
 // Get vendor_id by vendor_id from vendorName
 app.get("/api/vendor-names/by-id", (req, res) => {
-  const { id } = req.query;
+  const { id } = req.query; // could be "1,2,5"
   if (!id) {
-    return res.status(400).json({ error: "Missing vendor name in query" });
+    return res.status(400).json({ error: "Missing vendor id in query" });
   }
-  db.get(
-    "SELECT vendor_id, vendorName FROM vendor_names WHERE vendor_id = ?",
-    [id],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: "Database error", details: err.message });
-      }
-      if (!row) {
-        return res.status(404).json({ error: "Vendor not found" });
-      }
-      res.json(row);
+
+  // split into array
+  const ids = id.toString().split(",").map(Number).filter(Boolean);
+
+  const placeholders = ids.map(() => "?").join(",");
+  const query = `SELECT vendor_id, vendorName FROM vendor_names WHERE vendor_id IN (${placeholders})`;
+
+  db.all(query, ids, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: "Database error", details: err.message });
     }
-  );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: "Vendors not found" });
+    }
+    res.json(rows);
+  });
 });
+
 // --- End of Vendor Name ---
 
 // --- Vendor items API ---
@@ -1880,17 +1892,29 @@ app.get("/api/vendor-items", (req, res) => {
   });
 });
 
-// Get all vendor items with given vendor_id
+// Get all vendor items with one or more vendor_ids
 app.get("/api/vendor-items/vendor/:vid", (req, res) => {
-  const vid = req.params.vid;
-  db.all("SELECT * FROM vendor_items where vendor_id=?", [vid], (err, rows) => {
+  const vid = req.params.vid; // could be "3" or "1,2,5"
+  if (!vid) {
+    return res.status(400).json({ error: "Missing vendor_id(s)" });
+  }
+  // split into array
+  const vendorIds = vid.split(",").map(id => parseInt(id)).filter(Boolean);
+  if (vendorIds.length === 0) {
+    return res.json([]);
+  }
+  // build placeholders (?, ?, ?)
+  const placeholders = vendorIds.map(() => "?").join(",");
+  const query = `SELECT * FROM vendor_items WHERE vendor_id IN (${placeholders})`;
+  db.all(query, vendorIds, (err, rows) => {
     if (err) {
-      console.error("Error fetching vendor invoices:", err);
-      return res.status(500).json({ error: "Failed to fetch vendor invoices" });
+      console.error("Error fetching vendor items:", err);
+      return res.status(500).json({ error: "Failed to fetch vendor items" });
     }
     res.json(rows);
   });
 });
+
 
 // Get all vendor items with given invoice no
 app.get("/api/vendor-items/:id", (req, res) => {

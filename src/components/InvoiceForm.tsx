@@ -10,6 +10,7 @@ import { Invoice, InvoiceItem } from "@/types/invoice";
 import { saveInvoice, generateInvoiceNumber } from "@/utils/invoiceStorage";
 import { numberToWords } from "@/utils/numberToWords";
 import { useToast } from "@/hooks/use-toast";
+import Select from "react-select";
 
 // Utility for localStorage delivery addresses
 const DELIVERY_ADDRESSES_KEY = "veshad_delivery_addresses";
@@ -40,6 +41,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<Invoice | null>(null);
   const [vendors, setVendors] = useState<{ vendor_id: number; vendorName: string }[]>([]);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [vendorItemsList, setVendorItemsList] = useState<{ itemName: string }[]>([]);
 
   // Fetch invoice number if creating new
@@ -161,6 +163,11 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       amountInWords: numberToWords(grandTotal)
     }));
   }, [formData]);
+
+  const vendorOptions = vendors.map(v => ({
+    value: v.vendor_id.toString(),
+    label: v.vendorName,
+  }));
 
   if (loading || !formData) {
     return <div className="p-6">Loading...</div>;
@@ -648,27 +655,26 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
                   className="w-full"
                 />
               </div>
-
               <div>
-                <Label htmlFor="vendorName">Vendor Name</Label>
-                <select
+                <Label htmlFor="vendorName">Vendor Name(s)</Label>
+                <Select
                   id="vendorName"
-                  className="border rounded px-2 py-1 w-full"
-                  value={formData.vendor_id || ""}
-                  onChange={handleVendorChange}
-                  required
-                >
-                  <option value="">-- Select Vendor --</option>
-                  {/* Fallback for edit mode: show current vendor if not in vendors list, always at the top */}
-                  {formData.vendor_id && vendorName && !vendors.some(v => v.vendor_id === formData.vendor_id) && (
-                    <option value={formData.vendor_id}>{vendorName}</option>
+                  isMulti
+                  options={vendorOptions}
+                  value={vendorOptions.filter(opt =>
+                    formData.vendor_id
+                      ? formData.vendor_id.toString().split(",").includes(opt.value)
+                      : false
                   )}
-                  {vendors.map(vendor => (
-                    <option key={vendor.vendor_id} value={vendor.vendor_id}>
-                      {vendor.vendorName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(selected) => {
+                    const values = selected.map((s) => s.value);
+                    setFormData(prev => prev && ({
+                      ...prev,
+                      vendor_id: values.join(",") as unknown as number,
+                    }));
+                  }}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
