@@ -80,7 +80,7 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
                   </a>
                 </div>
               </div>
-              <div className="flex items-center justify-center p-4">
+              <div className="flex items-center justify-center p-4 border-r border-gray-800">
                 <img 
                   src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" 
                   alt="Veshad and Company Logo" 
