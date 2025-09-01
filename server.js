@@ -9,6 +9,12 @@ import path from 'path';
 import fs from 'fs';
 import multer from "multer";
 import xlsx from "xlsx";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,6 +32,66 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' })); // Increased limit for larger payloads
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// OAuth session setup
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your-session-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set to true if using HTTPS
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serialize user to session
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
+
+// Configure Google OAuth strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,      // from Google Cloud Console
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  // You can save user info to DB here if needed
+  return done(null, profile);
+}));
+
+// Start Google OAuth login
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Google OAuth callback
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    // Successful login, redirect to frontend
+    res.redirect('/'); // or your dashboard route
+  }
+);
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/login');
+  });
+});
+
+app.get("/api/secure-data", ensureAuthenticated, (req, res) => {
+  res.json({ secret: "This is protected data!" });
+});
+
+// Middleware to protect routes
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) { return next(); }
+  res.status(401).json({ error: "Unauthorized" });
+}
 
 // Database initialization
 const dbPath = path.resolve(__dirname, "invoices.db");
