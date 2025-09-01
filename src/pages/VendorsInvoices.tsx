@@ -17,6 +17,7 @@ const emptyInvoice = {
   sgst: 0,  
   igst: 0,
   paymentStatus: "Pending",
+  paymentDate: "",
   veshadInvoiceRefNo: "",
 };
 
@@ -48,6 +49,7 @@ export default function VendorsInvoices() {
     date: new Date().toISOString().split('T')[0],
     refNo: '',
     paymentStatus: 'Pending',
+    paymentDate: '', 
     items: [{ itemName: '', pricePerUnit: 0, quantity: 0, total: 0 }],
     cgst: 0,
     sgst: 0,
@@ -148,7 +150,13 @@ export default function VendorsInvoices() {
 
   const handleInvoiceFormChange = async (e) => {
     const { name, value } = e.target;
-    setInvoiceForm((prev) => ({ ...prev, [name]: value }));
+    setInvoiceForm((prev) => {
+      let updated = { ...prev, [name]: value };
+      if (name === 'paymentStatus' && value !== 'Paid') {
+        updated.paymentDate = '';
+      }
+      return updated;
+    });
 
     // If vendorName is changed, fetch vendor_id using the new endpoint
     if (name === 'vendorName' && value) {
@@ -200,19 +208,20 @@ export default function VendorsInvoices() {
     // Compose invoice payload for vendors_invoices
     const totalQty = invoiceForm.items.reduce((sum, i) => sum + (i.quantity || 0), 0);
     const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
-    const cgst = Number(invoiceForm.cgst) || 0;
-    const sgst = Number(invoiceForm.sgst) || 0;
-    const igst = Number(invoiceForm.igst) || 0;
-    const grandTotal = subtotal + (subtotal * (cgst + sgst + igst) / 100);
+    const cgstAmount = ((Number(invoiceForm.cgst) || 0) * subtotal) / 100;
+    const sgstAmount = ((Number(invoiceForm.sgst) || 0) * subtotal) / 100;
+    const igstAmount = ((Number(invoiceForm.igst) || 0) * subtotal) / 100;
+    const grandTotal = subtotal + cgstAmount + sgstAmount + igstAmount;
     const invoicePayload = {
       date: invoiceForm.date,
       vendor_id,
       total_quantity: totalQty,
       totalInvoiceValue: subtotal,
-      cgst,
-      sgst,
-      igst,
+      cgst: cgstAmount,
+      sgst: sgstAmount,
+      igst: igstAmount,
       paymentStatus: invoiceForm.paymentStatus,
+      paymentDate: invoiceForm.paymentStatus === "Paid" ? invoiceForm.paymentDate : "",
       veshadInvoiceRefNo: invoiceForm.refNo || '',
     };
     // Save invoice, get new invoice id
@@ -252,6 +261,7 @@ export default function VendorsInvoices() {
       date: new Date().toISOString().split('T')[0],
       refNo: '',
       paymentStatus: 'Pending',
+      paymentDate: '',
       items: [{ itemName: '', pricePerUnit: 0, quantity: 0, total: 0 }],
       cgst: 0,
       sgst: 0,
@@ -263,13 +273,14 @@ export default function VendorsInvoices() {
   const columns = [
     { key: "select", label: "", minWidth: 36 },
     { key: "date", label: "Date", minWidth: 36 },
-    { key: "vendor_id", label: "Vendor ID", minWidth: 100 },
-    { key: "total_quantity", label: "Total Quantity", minWidth: 100 },
+    { key: "vendor_id", label: "Vendor ID", minWidth: 30 },
+    { key: "total_quantity", label: "Total Quantity", minWidth: 30 },
     { key: "totalInvoiceValue", label: "Vendor Invoice without GST", minWidth: 80 },
     { key: "cgst", label: "CGST", minWidth: 60 },
     { key: "sgst", label: "SGST", minWidth: 60 },
     { key: "igst", label: "IGST", minWidth: 60 },
     { key: "paymentStatus", label: "Status", minWidth: 80 },
+     { key: "paymentDate", label: "paymentDate", minWidth: 36 },
     { key: "veshadInvoiceRefNo", label: "Veshad Invoice Ref No", minWidth: 100 },
     { key: "", label: "Action", minWidth: 100 },
   ];
@@ -292,19 +303,6 @@ export default function VendorsInvoices() {
               id="file-upload"
               disabled={uploading}
             />
-            {/* <Button asChild disabled={uploading}>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                {uploading ? (
-                  <>
-                    <UploadIcon className="h-4 w-4 animate-spin mr-2" /> Uploading...
-                  </>
-                ) : (
-                  <>
-                    <UploadIcon className="h-4 w-4 mr-2" /> Import File
-                  </>
-                )}
-              </label>
-            </Button> */}
           </div>
           <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={() => handleDelete(selectedRows)} disabled={selectedRows.length === 0}>
             <TrashIcon className="w-4 h-4 mr-2" /> Delete
@@ -340,6 +338,18 @@ export default function VendorsInvoices() {
                   <option value="Paid">Paid</option>
                 </select>
               </div>
+              {invoiceForm.paymentStatus === 'Paid' && (
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    name="paymentDate"
+                    value={invoiceForm.paymentDate}
+                    onChange={handleInvoiceFormChange}
+                    className="border rounded px-2 py-1"
+                  />
+                </div>
+              )}
             </div>
             <div className="border-t border-b border-gray-400 py-4 mb-4">
               <div className="font-bold mb-2">Items</div>
@@ -372,9 +382,27 @@ export default function VendorsInvoices() {
               <div>Total Qty: <b>{invoiceForm.items.reduce((sum, i) => sum + (i.quantity || 0), 0)}</b></div>
               <div>Subtotal: ₹{invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0).toFixed(2)}</div>
               <div className="flex gap-4 mt-2">
-                <div>CGST: <input name="cgst" type="number" value={invoiceForm.cgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%</div>
-                <div>SGST: <input name="sgst" type="number" value={invoiceForm.sgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%</div>
-                <div>IGST: <input name="igst" type="number" value={invoiceForm.igst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%</div>
+                <div>
+                  CGST: <input name="cgst" type="number" value={invoiceForm.cgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
+                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                    const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    return ((Number(invoiceForm.cgst) || 0) * subtotal / 100).toFixed(2);
+                  })()}</span>
+                </div>
+                <div>
+                  SGST: <input name="sgst" type="number" value={invoiceForm.sgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
+                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                    const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    return ((Number(invoiceForm.sgst) || 0) * subtotal / 100).toFixed(2);
+                  })()}</span>
+                </div>
+                <div>
+                  IGST: <input name="igst" type="number" value={invoiceForm.igst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
+                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                    const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    return ((Number(invoiceForm.igst) || 0) * subtotal / 100).toFixed(2);
+                  })()}</span>
+                </div>
               </div>
               <div className="mt-2 font-bold text-red-600">Grand Total: ₹{(() => {
                 const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
@@ -466,6 +494,7 @@ export default function VendorsInvoices() {
                   </span>
                 </button>
               </TableCell>
+              <TableCell className="border border-black text-right">{row.paymentDate}</TableCell>
               <TableCell className="border border-black">{row.veshadInvoiceRefNo}</TableCell>
               <TableCell className="border border-black text-center">
                 <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); setEditingInvoiceId(row.vinvoice_id); }} style={{ marginRight: 4 }}>Edit</Button>
@@ -530,19 +559,27 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
         const vendors = await vendorsRes.json();
         setVendorList(vendors);
         const invoice = invoices.find((inv) => String(inv.vinvoice_id) === String(vinvoice_id));
+        const itemsData = await itemsRes.json();
+        const filteredItems = itemsData.filter(item => String(item.vinvoice_id) === String(vinvoice_id));
+        setItems(filteredItems);
         if (!invoice) {
           setError("Invoice not found");
         } else {
+          // Calculate subtotal for GST percentage conversion
+          const subtotal = filteredItems.reduce((sum, i) => sum + (i.total || 0), 0);
+          const cgstPercent = subtotal ? ((Number(invoice.cgst) || 0) * 100 / subtotal) : 0;
+          const sgstPercent = subtotal ? ((Number(invoice.sgst) || 0) * 100 / subtotal) : 0;
+          const igstPercent = subtotal ? ((Number(invoice.igst) || 0) * 100 / subtotal) : 0;
           setForm({
             ...invoice,
             refNo: invoice.veshadInvoiceRefNo || "",
             vendorName: vendors.find(v => v.vendor_id === invoice.vendor_id)?.vendorName || "",
+            paymentDate: invoice.paymentDate || '',
+            cgst: cgstPercent,
+            sgst: sgstPercent,
+            igst: igstPercent,
           });
         }
-        const itemsData = await itemsRes.json();
-        // Only show items with matching vinvoice_id
-        const filteredItems = itemsData.filter(item => String(item.vinvoice_id) === String(vinvoice_id));
-        setItems(filteredItems);
       } catch (err) {
         setError("Failed to load data");
       } finally {
@@ -554,7 +591,13 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      let updated = { ...prev, [name]: value };
+      if (name === 'paymentStatus' && value !== 'Paid') {
+        updated.paymentDate = '';
+      }
+      return updated;
+    });
   };
 
   const handleItemChange = (idx, e) => {
@@ -584,15 +627,20 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
     try {
       // Update invoice
       const vendor_id = vendorList.find(v => v.vendorName === form.vendorName)?.vendor_id || form.vendor_id;
+      const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+      const cgstAmount = ((Number(form.cgst) || 0) * subtotal) / 100;
+      const sgstAmount = ((Number(form.sgst) || 0) * subtotal) / 100;
+      const igstAmount = ((Number(form.igst) || 0) * subtotal) / 100;
       const invoicePayload = {
         date: form.date,
         vendor_id,
         total_quantity: items.reduce((sum, i) => sum + (i.quantity || 0), 0),
-        totalInvoiceValue: items.reduce((sum, i) => sum + (i.total || 0), 0),
-        cgst: Number(form.cgst) || 0,
-        sgst: Number(form.sgst) || 0,
-        igst: Number(form.igst) || 0,
+        totalInvoiceValue: subtotal,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        igst: igstAmount,
         paymentStatus: form.paymentStatus,
+        paymentDate: form.paymentStatus === "Paid" ? form.paymentDate : "", 
         veshadInvoiceRefNo: form.refNo || '',
       };
       const res = await fetch(`/api/vendors-invoices/${vinvoice_id}`, {
@@ -660,6 +708,18 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
                 <option value="Paid">Paid</option>
               </select>
             </div>
+            {form.paymentStatus === 'Paid' && (
+              <div>
+                <label className="block text-xs font-semibold mb-1">Payment Date</label>
+                <input
+                  type="date"
+                  name="paymentDate"
+                  value={form.paymentDate}
+                  onChange={handleChange}
+                  className="border rounded px-2 py-1"
+                />
+              </div>
+            )}
           </div>
           <div className="border-t border-b border-gray-400 py-4 mb-4">
             <div className="font-bold mb-2">Items</div>
@@ -692,9 +752,27 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
             <div>Total Qty: <b>{items.reduce((sum, i) => sum + (i.quantity || 0), 0)}</b></div>
             <div>Subtotal: ₹{items.reduce((sum, i) => sum + (i.total || 0), 0).toFixed(2)}</div>
             <div className="flex gap-4 mt-2">
-              <div>CGST: <input name="cgst" type="number" value={form.cgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%</div>
-              <div>SGST: <input name="sgst" type="number" value={form.sgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%</div>
-              <div>IGST: <input name="igst" type="number" value={form.igst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%</div>
+              <div>
+                CGST: <input name="cgst" type="number" value={form.cgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
+                <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                  const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+                  return ((Number(form.cgst) || 0) * subtotal / 100).toFixed(2);
+                })()}</span>
+              </div>
+              <div>
+                SGST: <input name="sgst" type="number" value={form.sgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
+                <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                  const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+                  return ((Number(form.sgst) || 0) * subtotal / 100).toFixed(2);
+                })()}</span>
+              </div>
+              <div>
+                IGST: <input name="igst" type="number" value={form.igst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
+                <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                  const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+                  return ((Number(form.igst) || 0) * subtotal / 100).toFixed(2);
+                })()}</span>
+              </div>
             </div>
             <div className="mt-2 font-bold text-red-600">Grand Total: ₹{(() => {
               const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);

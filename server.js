@@ -187,6 +187,7 @@ db.serialize(() => {
     sgst REAL DEFAULT 0,
     igst REAL DEFAULT 0,
     paymentStatus TEXT DEFAULT 'Pending',
+    paymentDate TEXT DEFAULT '',
     veshadInvoiceRefNo TEXT
   )`);
 
@@ -1687,12 +1688,12 @@ app.get("/api/vendors-invoices", (req, res) => {
 // Add a new vendor invoice
 app.post("/api/vendors-invoices", (req, res) => {
   const {
-    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo
+    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo
   } = req.body;
   db.run(
-    `INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo],
+    `INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo],
     function (err) {
       if (err) {
         console.error("Error adding vendor invoice:", err);
@@ -1707,11 +1708,11 @@ app.post("/api/vendors-invoices", (req, res) => {
 app.put("/api/vendors-invoices/:id", (req, res) => {
   const { id } = req.params;
   const {
-    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo
+    date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo
   } = req.body;
   db.run(
-    `UPDATE vendors_invoices SET date=?, vendor_id=?, total_quantity=?, totalInvoiceValue=?, cgst=?, sgst=?, igst=?, paymentStatus=?, veshadInvoiceRefNo=? WHERE vinvoice_id=?`,
-    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo, id],
+    `UPDATE vendors_invoices SET date=?, vendor_id=?, total_quantity=?, totalInvoiceValue=?, cgst=?, sgst=?, igst=?, paymentStatus=?, paymentDate=?, veshadInvoiceRefNo=? WHERE vinvoice_id=?`,
+    [date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo, id],
     function (err) {
       if (err) {
         console.error("Error updating vendor invoice:", err);
@@ -1744,7 +1745,7 @@ app.post("/api/vendors-invoices/import", (req, res) => {
   if (!Array.isArray(data) || data.length === 0) {
     return res.status(400).json({ error: "No data provided for import" });
   }
-  const stmt = db.prepare(`INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, veshadInvoiceRefNo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const stmt = db.prepare(`INSERT INTO vendors_invoices (date, vendor_id, total_quantity, totalInvoiceValue, cgst, sgst, igst, paymentStatus, paymentDate, veshadInvoiceRefNo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   for (const row of data) {
     // Convert Excel serial date to YYYY-MM-DD if needed
     if (row.date && typeof row.date === 'number') {
@@ -1752,7 +1753,7 @@ app.post("/api/vendors-invoices/import", (req, res) => {
       row.date = excelDate.toISOString().split('T')[0];
     }
     stmt.run([
-      row.date, row.vendor_id, row.total_quantity, row.totalInvoiceValue, row.cgst, row.sgst, row.igst, row.paymentStatus, row.veshadInvoiceRefNo
+      row.date, row.vendor_id, row.total_quantity, row.totalInvoiceValue, row.cgst, row.sgst, row.igst, row.paymentStatus, row.paymentDate, row.veshadInvoiceRefNo
     ]);
   }
   stmt.finalize((err) => {
