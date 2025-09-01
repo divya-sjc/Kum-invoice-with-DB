@@ -357,8 +357,8 @@ export default function VendorsInvoices() {
                 <thead>
                   <tr className="text-left">
                     <th>Item Name</th>
-                    <th>Price / Unit</th>
                     <th>Quantity</th>
+                    <th>Price / Unit</th>
                     <th>Total</th>
                     <th></th>
                   </tr>
@@ -367,10 +367,10 @@ export default function VendorsInvoices() {
                   {invoiceForm.items.map((item, idx) => (
                     <tr key={idx}>
                       <td><input name="itemName" value={item.itemName} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-32" /></td>
-                      <td><input name="pricePerUnit" type="number" value={item.pricePerUnit} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
                       <td><input name="quantity" type="number" value={item.quantity} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
+                      <td><input name="pricePerUnit" type="number" value={item.pricePerUnit} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
                       <td className="text-right">{item.total.toFixed(2)}</td>
-                      <td><Button size="sm" variant="destructive" onClick={() => handleRemoveItem(idx)}><TrashIcon className="w-4 h-4" /></Button></td>
+                      <td><Button size="sm" variant="destructive" type="button" onClick={() => handleRemoveItem(idx)}><TrashIcon className="w-4 h-4" /></Button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -727,8 +727,8 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
               <thead>
                 <tr className="text-left">
                   <th>Item Name</th>
-                  <th>Price / Unit</th>
                   <th>Quantity</th>
+                  <th>Price / Unit</th>
                   <th>Total</th>
                   <th></th>
                 </tr>
@@ -737,15 +737,15 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
                 {items.map((item, idx) => (
                   <tr key={idx}>
                     <td><input name="itemName" value={item.itemName} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-32" /></td>
-                    <td><input name="pricePerUnit" type="number" value={item.pricePerUnit} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
                     <td><input name="quantity" type="number" value={item.quantity} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
+                    <td><input name="pricePerUnit" type="number" value={item.pricePerUnit} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
                     <td className="text-right">{item.total?.toFixed(2) ?? '0.00'}</td>
-                    <td><Button size="sm" variant="destructive" onClick={() => handleRemoveItem(idx)}>Remove</Button></td>
+                    <td><Button size="sm" variant="destructive" type="button" onClick={() => handleRemoveItem(idx)}>Remove</Button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <Button size="sm" variant="outline" onClick={handleAddItem} className="mb-2">+ Add Item</Button>
+            <Button size="sm" variant="outline" type="button" onClick={handleAddItem} className="mb-2">+ Add Item</Button>
           </div>
           <div className="mb-4">
             <div>Summary:</div>
