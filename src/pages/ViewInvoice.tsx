@@ -95,8 +95,8 @@ const ViewInvoice = () => {
 
   return (
     <div className="p-6 space-y-6" style={{ position: "relative" }}>
-      {/* GST No at the top, thick bold, font size 18 */}
-      <div style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 'bold', fontSize: 18, letterSpacing: 1, marginBottom: 8 }}>
+      {/* GST No at the top, thick bold, font size 22 */}
+      <div style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 'bold', fontSize: 22, letterSpacing: 1, marginBottom: 8 }}>
         GST No: 29DXRPS1061J1ZS
       </div>
       {/* Watermark removed for View Invoice */}

@@ -263,11 +263,12 @@ export default function DeliveryChallan() {
         return;
       }
 
-      await saveDC(challanToSave);
-      setShowForm(false);
-      const updatedDCs = await fetchAllDCs();
-      setDCs(updatedDCs);
-      alert(`Delivery Challan ${challan.isEditing ? 'updated' : 'saved'} successfully!`);
+  await saveDC(challanToSave);
+  setShowForm(false);
+  setChallan(initialChallan); // Reset form state after save
+  const updatedDCs = await fetchAllDCs();
+  setDCs(updatedDCs);
+  alert(`Delivery Challan ${challan.isEditing ? 'updated' : 'saved'} successfully!`);
     } catch (error) {
       console.error('Error saving delivery challan:', error);
       alert(error.message || 'Failed to save delivery challan. Please try again.');
@@ -325,6 +326,12 @@ export default function DeliveryChallan() {
   }
 
   if (!showForm) {
+    // Sort delivery challans by invoiceNumber ascending
+    const sortedDCs = [...dcs].sort((a, b) => {
+      if (!a.invoiceNumber) return 1;
+      if (!b.invoiceNumber) return -1;
+      return String(a.invoiceNumber).localeCompare(String(b.invoiceNumber));
+    });
     return (
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -342,28 +349,28 @@ export default function DeliveryChallan() {
             Create New DC
           </button>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }} border={1}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} border={1}>
           <thead>
-            <tr style={{ background: '#f0f0f0' }}>
-              <th>Challan No</th>
-              <th>Order date</th>
-              <th>Dispatch Date</th>
-              <th>Eway Bill</th>
-              <th>Invoice #</th>
-              <th>Remarks</th>
-              <th>Actions</th>
+            <tr style={{ background: '#4472C4', color: 'white', fontSize: 18 }}>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Challan No</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Order date</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Dispatch Date</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Eway Bill</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Invoice #</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Remarks</th>
+              <th style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {dcs.map(dc => (
-              <tr key={dc.challanNo}>
-                <td>{dc.challanNo}</td>
-                <td>{dc.order_date}</td>
-                <td>{dc.dispatch_date}</td>
-                <td>{dc.eway_bill_no}</td>
-                <td>{dc.invoiceNumber}</td>
-                <td>{dc.remarks}</td>
-                <td>
+            {sortedDCs.map(dc => (
+              <tr key={dc.challanNo} style={{ background: '#fff', fontSize: 16 }}>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.challanNo}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.order_date}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.dispatch_date}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.eway_bill_no}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.invoiceNumber}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{dc.remarks}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                     <button
                       onClick={() => handleEdit(dc.challanNo)}
@@ -420,7 +427,7 @@ export default function DeliveryChallan() {
                 BANGALORE - 560008, KARNATAKA, INDIA<br />
                 Landline:- (91) - 80 - 25272041,  
                 Mobile :- (91) 9036644721<br />
-                Email:- veshad@outlook.com / veshad.blr@gmail.com
+                Email:- veshad.blr@gmail.com // admin@veshad.com
               </div>
             </div>
           </div>
@@ -439,7 +446,7 @@ export default function DeliveryChallan() {
             BANGALORE - 560008, KARNATAKA, INDIA<br />
             Landline:- (91) - 80 - 25272041,    
             Mobile :- (91) 9036644721<br />
-            Email:- veshad@outlook.com / veshad.blr@gmail.com<br />
+            Email:- veshad.blr@gmail.com // admin@veshad.com<br />
             GST: 29DXRPS1061J1ZS
           </div>
         </div>
@@ -457,7 +464,6 @@ export default function DeliveryChallan() {
             value={challan.challanNo || ""}
             onChange={handleChange}
             style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
-            disabled={challan.isEditing}
           />
         </div>
         <div style={{ flex: 1, marginRight: 12 }}>
@@ -470,7 +476,6 @@ export default function DeliveryChallan() {
             value={challan.order_date || ""}
             onChange={handleChange}
             style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
-            disabled={challan.isEditing}
           />
         </div>
         <div style={{ flex: 1 }}>
@@ -496,7 +501,6 @@ export default function DeliveryChallan() {
           onChange={handleSelectInvoice}
           onClick={handleFetchInvoices}
           style={{ width: 220, fontSize: 16 }}
-          disabled={challan.isEditing}
         >
           <option value="">Select Invoice</option>
           {invoiceOptions.map(inv => (
@@ -506,7 +510,7 @@ export default function DeliveryChallan() {
           ))}
         </select>
           <label>
-            E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} disabled={challan.isEditing} />
+            E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} />
           </label>
         <div><br /></div>
          </div>
@@ -521,40 +525,39 @@ export default function DeliveryChallan() {
             onChange={handleChange}
             rows={3}
             style={{ width: 300, fontSize: 16 }}
-            disabled
           />
         </div>
         </div>
       <table className="table-auto w-full text-sm border border-black" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 , justifyContent: 'space-between'}} border={1}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
-            <th style={{ textAlign: 'left', padding: '8px', minWidth: 300, border: '1px solid #000' }}>Description</th>
-            <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Quantity</th>
-            <th style={{ textAlign: 'left', padding: '8px', minWidth: 160, border: '1px solid #000' }}>Remarks</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 350, border: '1px solid #000' }}>Description</th>
+            <th style={{ textAlign: 'center', padding: '8px', minWidth: 100, border: '1px solid #000' }}>Quantity</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 200, border: '1px solid #000' }}>Remarks</th>
             <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Action</th>
           </tr>
         </thead>
         <tbody>
           {challan.items.map((item, idx) => (
             <tr key={idx}>
-              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000', maxWidth: 350, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}>
                 <textarea
                   name="item_description"
                   value={item.item_description}
                   onChange={e => handleItemChange(idx, e)}
-                  style={{ width: '100%', fontSize: 16, resize: 'vertical', minWidth: 300, boxSizing: 'border-box' }}
-                  rows={2}
+                  style={{ width: '100%', fontSize: 18, resize: 'vertical', minHeight: 40, maxWidth: 340, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap', boxSizing: 'border-box' }}
+                  rows={3}
                   wrap="soft"
                 />
               </td>
               <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
-                <input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 60, fontSize: 16, textAlign: 'center' }} />
+                <input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 80, fontSize: 18, textAlign: 'center' }} />
               </td>
               <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
-                <input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: '100%', minWidth: 120, fontSize: 16 }} />
+                <input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: '100%', minWidth: 180, fontSize: 18 }} />
               </td>
               <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
-                <button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 16, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button>
+                <button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 18, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button>
               </td>
             </tr>
           ))}

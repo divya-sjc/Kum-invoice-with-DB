@@ -476,7 +476,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Invoice Header */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoice Details</CardTitle>
+          <CardTitle style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Invoice Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -516,7 +516,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Delivery Address */}
       <Card>
         <CardHeader>
-          <CardTitle>Delivery Address</CardTitle>
+          <CardTitle style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Delivery Address</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -595,7 +595,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Additional Details */}
       <Card>
         <CardHeader>
-          <CardTitle>Additional Details</CardTitle>
+          <CardTitle style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Additional Details</CardTitle>
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -684,7 +684,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Items */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Items</CardTitle>
+          <CardTitle style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Items</CardTitle>
           <Button type="button" onClick={addItem} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Add Item
@@ -780,7 +780,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Totals Summary with Manual Entry */}
       <Card>
         <CardHeader>
-          <CardTitle>Summary</CardTitle>
+          <CardTitle style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="w-full overflow-x-auto">
@@ -855,7 +855,7 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
       {/* Payment Details (Enhanced) */}
       <Card className="border-blue-200 shadow-md bg-blue-50">
         <CardHeader className="bg-blue-500 text-white">
-          <CardTitle className="text-xl">Payment Information</CardTitle>
+          <CardTitle className="text-xl" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', padding: '8px', borderRadius: '6px' }}>Payment Information</CardTitle>
         </CardHeader>
         {/* Compact 2-row layout for payment info */}
         <CardContent className="grid grid-cols-1 gap-2 p-4">
@@ -901,9 +901,15 @@ export const InvoiceForm = ({ invoice, onSave, vendorName }: InvoiceFormProps) =
           <Save className="h-4 w-4 mr-2" />
           Save Invoice
         </Button>
-        <Button type="button" className="bg-green-600 hover:bg-green-700 ml-2" onClick={handleSaveAndGoToDC}>
-          DC
-        </Button>
+        <a
+          href="https://ewaybillgst.gov.in/Login.aspx"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-red-600 text-white px-6 py-2 rounded shadow hover:bg-red-700 transition flex items-center"
+          style={{ background: '#C8102E' }}
+        >
+          Eway Bill
+        </a>
       </div>
     </form>
   );

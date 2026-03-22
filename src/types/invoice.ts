@@ -66,4 +66,5 @@ export interface Invoice {
   manualEntryLabel?: string;
   manualEntryAmount?: number;
   manualEntrySign?: number;
+  manualEntry?: number;
 }

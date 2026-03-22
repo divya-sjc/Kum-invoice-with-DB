@@ -1,5 +1,3 @@
-// Define purchaseUpload for file import
-const purchaseUpload = multer({ dest: "uploads/" });
 import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
@@ -15,7 +13,6 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import dotenv from "dotenv";
 dotenv.config();
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 4000;
@@ -23,7 +20,23 @@ const PORT = process.env.PORT || 4000;
 // Initialize Express app
 const app = express();
 
-// Configure middleware
+// Performa Invoice API endpoint (basic, similar to preview invoice)
+app.get("/api/performa-invoice/:invoiceNumber", (req, res) => {
+  const invoiceNumber = req.params.invoiceNumber;
+  db.get("SELECT * FROM invoices WHERE invoiceNumber = ?", [invoiceNumber], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else if (!row) {
+      res.status(404).json({ error: "Performa Invoice not found" });
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+// Define purchaseUpload for file import
+const purchaseUpload = multer({ dest: "uploads/" });
+
 app.use(cors({
   origin: ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -109,6 +122,93 @@ const db = new sqlite3.Database(dbPath,
 
 // Configure database settings
 db.serialize(() => {
+  // Performa Invoices table
+  db.run(`CREATE TABLE IF NOT EXISTS performa_invoices (
+    performaInvoiceNumber TEXT PRIMARY KEY,
+    date TEXT DEFAULT (datetime('now')),
+    revision INTEGER DEFAULT 1,
+    deliveryAddress_name TEXT,
+    deliveryAddress_address TEXT,
+    deliveryAddress_city TEXT,
+    deliveryAddress_postalCode TEXT,
+    deliveryAddress_state TEXT,
+    deliveryDate TEXT,
+    deliveryChallanRef TEXT,
+    hsnSac TEXT,
+    poRefNo TEXT,
+    ewayBillRef TEXT DEFAULT '',
+    invoiceTotal REAL,
+    totalNet REAL DEFAULT 0,
+    veshadCgst REAL DEFAULT 0,
+    veshadSgst REAL DEFAULT 0,
+    veshadIgst REAL DEFAULT 0,
+    grandTotal REAL DEFAULT 0,
+    amountInWords TEXT DEFAULT "",
+    notes TEXT DEFAULT "",
+    vendor_id INTEGER,
+    profitPercent REAL DEFAULT 0
+  )`);
+// Performa Invoice CRUD API
+app.get("/api/performa-invoices", (req, res) => {
+  db.all("SELECT * FROM performa_invoices ORDER BY date DESC", [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+app.get("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  db.get("SELECT * FROM performa_invoices WHERE performaInvoiceNumber = ?", [performaInvoiceNumber], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else if (!row) {
+      res.status(404).json({ error: "Performa Invoice not found" });
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+app.post("/api/performa-invoices", (req, res) => {
+  const data = req.body;
+  const keys = Object.keys(data);
+  const values = keys.map(k => data[k]);
+  db.run(`INSERT INTO performa_invoices (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`, values, function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true, id: data.performaInvoiceNumber });
+    }
+  });
+});
+
+app.put("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  const data = req.body;
+  const keys = Object.keys(data);
+  const values = keys.map(k => data[k]);
+  db.run(`UPDATE performa_invoices SET ${keys.map(k => `${k} = ?`).join(",")} WHERE performaInvoiceNumber = ?`, [...values, performaInvoiceNumber], function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
+app.delete("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  db.run("DELETE FROM performa_invoices WHERE performaInvoiceNumber = ?", [performaInvoiceNumber], function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
   db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA busy_timeout = 60000');
   db.run('PRAGMA synchronous = NORMAL');

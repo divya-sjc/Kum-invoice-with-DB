@@ -39,6 +39,7 @@ const emptyItems = {
 
 export default function VendorsInvoices() {
   const [rows, setRows] = useState<any[]>([]);
+  const [searchItemName, setSearchItemName] = useState("");
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
   const [vendorModalOpen, setVendorModalOpen] = useState(false);
@@ -79,6 +80,16 @@ export default function VendorsInvoices() {
         setVendorList(data); // Save full vendor objects for id lookup
       });
   }, []);
+
+  // Filtered rows by item name
+  const filteredRows = searchItemName.trim()
+    ? rows.filter(row => {
+        if (!row.items || !Array.isArray(row.items)) return false;
+        return row.items.some(item =>
+          item.itemName && item.itemName.toLowerCase().includes(searchItemName.toLowerCase())
+        );
+      })
+    : rows;
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -309,6 +320,15 @@ export default function VendorsInvoices() {
           </Button>
         </div>
       </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Input
+          type="text"
+          placeholder="Search by Item Name..."
+          value={searchItemName}
+          onChange={e => setSearchItemName(e.target.value)}
+          className="w-64"
+        />
+      </div>
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 min-w-[340px] max-w-[90vw] shadow-lg">
@@ -355,12 +375,12 @@ export default function VendorsInvoices() {
               <div className="font-bold mb-2">Items</div>
               <table className="w-full text-sm mb-2">
                 <thead>
-                  <tr className="text-left">
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th>Price / Unit</th>
-                    <th>Total</th>
-                    <th></th>
+                  <tr className="text-left bg-[#4472C4]">
+                    <th className="text-white">Item Name</th>
+                    <th className="text-white">Quantity</th>
+                    <th className="text-white">Price / Unit</th>
+                    <th className="text-white">Total</th>
+                    <th className="text-white"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -369,7 +389,7 @@ export default function VendorsInvoices() {
                       <td><input name="itemName" value={item.itemName} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-32" /></td>
                       <td><input name="quantity" type="number" value={item.quantity} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
                       <td><input name="pricePerUnit" type="number" value={item.pricePerUnit} onChange={e => handleItemChange(idx, e)} className="border rounded px-2 py-1 w-20" /></td>
-                      <td className="text-right">{item.total.toFixed(2)}</td>
+                      <td className="text-right">₹{Number(item.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td><Button size="sm" variant="destructive" type="button" onClick={() => handleRemoveItem(idx)}><TrashIcon className="w-4 h-4" /></Button></td>
                     </tr>
                   ))}
@@ -383,25 +403,27 @@ export default function VendorsInvoices() {
               <div>Subtotal: ₹{invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0).toFixed(2)}</div>
               <div className="flex gap-4 mt-2">
                 <div>
-                  CGST: <input name="cgst" type="number" value={invoiceForm.cgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
-                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
-                    const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
-                    return ((Number(invoiceForm.cgst) || 0) * subtotal / 100).toFixed(2);
-                  })()}</span>
-                </div>
-                <div>
-                  SGST: <input name="sgst" type="number" value={invoiceForm.sgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
-                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
-                    const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
-                    return ((Number(invoiceForm.sgst) || 0) * subtotal / 100).toFixed(2);
-                  })()}</span>
-                </div>
-                <div>
                   IGST: <input name="igst" type="number" value={invoiceForm.igst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
                   <span className="ml-2 text-xs text-gray-600">₹{(() => {
                     const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
                     return ((Number(invoiceForm.igst) || 0) * subtotal / 100).toFixed(2);
                   })()}</span>
+                </div>
+                <div className="flex gap-4">
+                  <div>
+                    CGST: <input name="cgst" type="number" value={invoiceForm.cgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
+                    <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                      const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                      return ((Number(invoiceForm.cgst) || 0) * subtotal / 100).toFixed(2);
+                    })()}</span>
+                  </div>
+                  <div>
+                    SGST: <input name="sgst" type="number" value={invoiceForm.sgst} onChange={handleInvoiceFormChange} className="border rounded px-2 py-1 w-16" />%
+                    <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                      const subtotal = invoiceForm.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                      return ((Number(invoiceForm.sgst) || 0) * subtotal / 100).toFixed(2);
+                    })()}</span>
+                  </div>
                 </div>
               </div>
               <div className="mt-2 font-bold text-red-600">Grand Total: ₹{(() => {
@@ -421,8 +443,8 @@ export default function VendorsInvoices() {
       )}
       <Table className="table-auto w-full text-sm border border-black">
         <TableHeader className="border border-black">
-          <TableRow>
-            <TableHead className="border border-black text-center" style={{ minWidth: columns[0].minWidth }}>
+          <TableRow className="bg-[#4472C4]">
+            <TableHead className="border border-black text-center text-white" style={{ minWidth: columns[0].minWidth }}>
               <input
                 type="checkbox"
                 style={{
@@ -438,12 +460,12 @@ export default function VendorsInvoices() {
               />
             </TableHead>
             {columns.slice(1).map((col, idx) => (
-              <TableHead key={col.key} className="border border-black" style={{ minWidth: col.minWidth }}>{col.label}</TableHead>
+              <TableHead key={col.key} className="border border-black text-white" style={{ minWidth: col.minWidth }}>{col.label}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row, idx) => (
+          {filteredRows.map((row, idx) => (
             <TableRow
               key={row.vinvoice_id}
               className={selectedRows.includes(row.vinvoice_id) ? "bg-blue-100" : ""}
@@ -545,6 +567,8 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
   const [vendorList, setVendorList] = useState<any[]>([]);
   const [form, setForm] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  // Manual Entry value should be set programmatically, not via user input
+  const [manualEntry] = useState(0); // Set value as needed from logic or props
 
   useEffect(() => {
     async function fetchData() {
@@ -639,6 +663,7 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
         cgst: cgstAmount,
         sgst: sgstAmount,
         igst: igstAmount,
+        manualEntry: manualEntry,
         paymentStatus: form.paymentStatus,
         paymentDate: form.paymentStatus === "Paid" ? form.paymentDate : "", 
         veshadInvoiceRefNo: form.refNo || '',
@@ -725,12 +750,12 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
             <div className="font-bold mb-2">Items</div>
             <table className="w-full text-sm mb-2">
               <thead>
-                <tr className="text-left">
-                  <th>Item Name</th>
-                  <th>Quantity</th>
-                  <th>Price / Unit</th>
-                  <th>Total</th>
-                  <th></th>
+                <tr className="text-left bg-[#4472C4]">
+                  <th className="text-white">Item Name</th>
+                  <th className="text-white">Quantity</th>
+                  <th className="text-white">Price / Unit</th>
+                  <th className="text-white">Total</th>
+                  <th className="text-white"></th>
                 </tr>
               </thead>
               <tbody>
@@ -753,33 +778,43 @@ export function EditVendorInvoiceForm({ vinvoice_id, onClose }) {
             <div>Subtotal: ₹{items.reduce((sum, i) => sum + (i.total || 0), 0).toFixed(2)}</div>
             <div className="flex gap-4 mt-2">
               <div>
-                CGST: <input name="cgst" type="number" value={form.cgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
-                <span className="ml-2 text-xs text-gray-600">₹{(() => {
-                  const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
-                  return ((Number(form.cgst) || 0) * subtotal / 100).toFixed(2);
-                })()}</span>
-              </div>
-              <div>
-                SGST: <input name="sgst" type="number" value={form.sgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
-                <span className="ml-2 text-xs text-gray-600">₹{(() => {
-                  const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
-                  return ((Number(form.sgst) || 0) * subtotal / 100).toFixed(2);
-                })()}</span>
-              </div>
-              <div>
                 IGST: <input name="igst" type="number" value={form.igst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
                 <span className="ml-2 text-xs text-gray-600">₹{(() => {
                   const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
                   return ((Number(form.igst) || 0) * subtotal / 100).toFixed(2);
                 })()}</span>
               </div>
+              <div className="flex gap-4">
+                <div>
+                  CGST: <input name="cgst" type="number" value={form.cgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
+                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                    const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    return ((Number(form.cgst) || 0) * subtotal / 100).toFixed(2);
+                  })()}</span>
+                </div>
+                <div>
+                  SGST: <input name="sgst" type="number" value={form.sgst} onChange={handleChange} className="border rounded px-2 py-1 w-16" />%
+                  <span className="ml-2 text-xs text-gray-600">₹{(() => {
+                    const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    return ((Number(form.sgst) || 0) * subtotal / 100).toFixed(2);
+                  })()}</span>
+                </div>
+              </div>
             </div>
+            {/* Manual Entry input removed; value should be set programmatically. Display only if present. */}
+            {manualEntry ? (
+              <div className="flex items-center gap-2 mt-4">
+                <span className="font-semibold text-sm">Manual Entry:</span>
+                <span className="text-base font-bold">₹{manualEntry.toFixed(2)}</span>
+                <span className="text-xs text-gray-600">(Included in Grand Total, not in GST)</span>
+              </div>
+            ) : null}
             <div className="mt-2 font-bold text-red-600">Grand Total: ₹{(() => {
               const subtotal = items.reduce((sum, i) => sum + (i.total || 0), 0);
               const cgst = Number(form.cgst) || 0;
               const sgst = Number(form.sgst) || 0;
               const igst = Number(form.igst) || 0;
-              return (subtotal + (subtotal * (cgst + sgst + igst) / 100)).toFixed(2);
+              return (subtotal + (subtotal * (cgst + sgst + igst) / 100) + manualEntry).toFixed(2);
             })()}</div>
           </div>
           <div className="flex gap-4 justify-end mt-4">
