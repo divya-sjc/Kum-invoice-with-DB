@@ -1,4 +1,5 @@
-import { Home, FileText, Plus, Calendar, Settings, ListChecks } from "lucide-react";
+import React, { useState } from "react";
+import { Home, FileText, Plus, Calendar, Settings, ListChecks, Folder } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -14,11 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  {
-	title: "Price Comparison",
-	url: "/price-comparison",
-	icon: FileText,
-  },
 	{
 		title: "Dashboard",
 		url: "/",
@@ -35,6 +31,11 @@ const menuItems = [
 		icon: Plus,
 	},
 	{
+		title: "Price Comparison",
+		url: "/price-comparison",
+		icon: FileText,
+  },
+	{
 		title: "Delivery Challan",
 		url: "/delivery-challan",
 		icon: FileText,
@@ -50,31 +51,42 @@ const menuItems = [
 		icon: FileText,
 	},
 	{
-		title: "Settings",
-		url: "/settings",
-		icon: Settings,
-	},
-	{
 		title: "Taxes", 
 		url: "/tax", 
 		icon: Calendar,
 	},
-  {
-	title: "Purchases", 
-	url: "/purchases", 
-	icon: FileText,
-  },
-  {
-	title: "Vendors Invoices",
-	url: "/vendors-invoices",
-	icon: FileText,
-  },
-  // Removed extra blank sidebar entries as per user request
+	{
+		title: "Purchases", 
+		url: "/purchases", 
+		icon: FileText,
+	},
+	{
+		title: "Vendors",
+		icon: Folder,
+		submenu: [
+			{
+				title: "Vendors Invoices",
+				url: "/vendors-invoices",
+				icon: FileText,
+			},
+			{
+				title: "Vendors Names",
+				url: "/vendors-names",
+				icon: FileText,
+			},
+			{
+				title: "Vendors Items",
+				url: "/vendors-items",
+				icon: FileText,
+			},
+		],
+	}
 ];
 
 
 export function AppSidebar() {
 	const location = useLocation();
+	const [openMenu, setOpenMenu] = useState<string | null>(null);
 
 	return (
 		<Sidebar className="border-r border-gray-200">
@@ -102,18 +114,55 @@ export function AppSidebar() {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{menuItems.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton
-										asChild
-										isActive={location.pathname === item.url}
-										className="data-[active=true]:bg-blue-100 data-[active=true]:text-blue-900 hover:bg-blue-50"
-									>
-										<Link to={item.url} className="flex items-center gap-3">
-											<item.icon className="h-4 w-4" />
-											<span>{item.title}</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
+								item.submenu ? (
+									<SidebarMenuItem key={item.title}>
+										<div>
+											<SidebarMenuButton
+												asChild
+												isActive={item.submenu.some(sub => location.pathname === sub.url)}
+												className="data-[active=true]:bg-blue-100 data-[active=true]:text-blue-900 hover:bg-blue-50"
+												onClick={e => {
+													e.preventDefault();
+													setOpenMenu(openMenu === item.title ? null : item.title);
+												}}
+											>
+												<div className="flex items-center gap-3 cursor-pointer select-none">
+													<item.icon className="h-4 w-4" />
+													<span>{item.title}</span>
+													<span className="ml-auto">{openMenu === item.title ? '▾' : '▸'}</span>
+												</div>
+											</SidebarMenuButton>
+											{openMenu === item.title && (
+												<div className="ml-8 mt-2 flex flex-col gap-1">
+													{item.submenu.map((sub) => (
+														<Link
+															key={sub.title}
+															to={sub.url}
+															className={`flex items-center gap-2 px-2 py-1 rounded hover:bg-blue-50 ${location.pathname === sub.url ? 'bg-blue-100 text-blue-900 font-semibold' : ''}`}
+															onClick={e => setOpenMenu(item.title)}
+														>
+															<sub.icon className="h-3 w-3" />
+															<span>{sub.title}</span>
+														</Link>
+													))}
+												</div>
+											)}
+										</div>
+									</SidebarMenuItem>
+								) : (
+									<SidebarMenuItem key={item.title}>
+										<SidebarMenuButton
+											asChild
+											isActive={location.pathname === item.url}
+											className="data-[active=true]:bg-blue-100 data-[active=true]:text-blue-900 hover:bg-blue-50"
+										>
+											<Link to={item.url} className="flex items-center gap-3">
+												<item.icon className="h-4 w-4" />
+												<span>{item.title}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								)
 							))}
 						</SidebarMenu>
 					</SidebarGroupContent>

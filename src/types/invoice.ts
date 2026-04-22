@@ -24,17 +24,14 @@ export interface Invoice {
   paymentReceived: number;
   balanceDue: number;
   totalNet: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
   grandTotal: number;
   amountInWords: string;
   paymentStatus?: 'Paid' | 'Pending';
-  paymentBank?: string; // Added
-  paymentRecvdDate?: string; // Added
-  paymentBankRef?: string; // Added
-  paymentDate?: string; // Added for payment date
-  ewayBillRef?: string; // Added for Eway Bill Ref
+  paymentBank?: string; 
+  paymentRecvdDate?: string; 
+  paymentBankRef?: string; 
+  paymentDate?: string; 
+  ewayBillRef?: string; 
   items: {
     id: number;
     item_description: string;
@@ -60,4 +57,13 @@ export interface Invoice {
   freight?: string;
   modeOfDespatch?: string;
   paymentTerms?: string;
+  veshadCgst: number;
+  veshadSgst: number;
+  veshadIgst: number;
+  notes?: string;
+  vendor_id?: number;
+  profitPercent?: number;
+  manualEntryLabel?: string;
+  manualEntryAmount?: number;
+  manualEntrySign?: number;
 }

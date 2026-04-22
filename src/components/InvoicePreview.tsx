@@ -80,34 +80,34 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
                   </a>
                 </div>
               </div>
-              <div className="flex items-center justify-center p-4">
+              <div className="flex items-center justify-center p-4 border-r border-gray-800">
                 <img 
                   src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" 
                   alt="Veshad and Company Logo" 
                   className="h-44 w-auto"
                 />
               </div>
-              <div className="p-6">
-                <div className="text-right">
-                  <div className="text-3xl font-bold">INVOICE</div>
-                  <table className="ml-auto mt-2 text-base">
+              <div className="p-5 text-left">
+                  <div className="text-2xl font-bold">INVOICE</div>
+                  <table className="mt-2 text-base">
                     <tbody>
                       <tr>
-                        <td className="pr-1 align-top">Date</td>
-                        <td className="pl-1 align-top">{new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                        <td className="pr-2 align-top">Date:</td>
+                        <td className="pl-3 align-top text-left">
+                          {new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
                       </tr>
                       <tr>
-                        <td className="pr-1 align-top">Invoice No.</td>
-                        <td className="pl-1 align-top">{invoice.invoiceNumber}</td>
+                        <td className="pr-2 align-top">Invoice No.:</td>
+                        <td className="pl-3 align-top text-left">{invoice.invoiceNumber}</td>
                       </tr>
                       <tr>
-                        <td className="pr-1 align-top">Rev</td>
-                        <td className="pl-1 align-top">{invoice.revision}</td>
+                        <td className="pr-2 align-top">Rev:</td>
+                        <td className="pl-3 align-top text-left">{invoice.revision}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-              </div>
             </div>
             {/* Supplier and Delivery Address */}
             <div className="grid grid-cols-2">
@@ -157,13 +157,15 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
                 <div className="text-sm">{invoice.ewayBillRef || '-'}</div>
               </div>
             </div>
+            <div className="grid grid-cols-5 border-t border-gray-800 text-base"></div>
+            <div><br /></div>
             {/* Items Table */}
             <table className="w-full border-t border-gray-800 text-base">
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="border-r border-gray-800 p-3 text-left min-w-[2.5rem]">ITEM</th>
-                  <th className="border-r border-gray-800 p-3 text-left">DESCRIPTION</th>
-                  <th className="border-r border-gray-800 p-3 text-center min-w-[4.5rem] whitespace-nowrap">QTY in PCS</th>
+                  <th className="border-r border-gray-800 p-3 text-left min-w-[16.86rem]">DESCRIPTION</th>
+                  <th className="border-r border-gray-800 p-3 text-center min-w-[0.5 rem] whitespace-nowrap">QTY in PCS</th>
                   <th className="border-r border-gray-800 p-3 text-center min-w-[6rem] whitespace-nowrap">UNIT PRICE</th>
                   <th className="p-3 text-center min-w-[6rem] whitespace-nowrap">TOTAL</th>
                 </tr>
@@ -190,6 +192,7 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
                 ))}
               </tbody>
             </table>
+            <div className="grid grid-cols-5 border-t border-gray-800 text-base"></div>
             {/* Totals */}
             <div className="grid grid-cols-2">
               {/* Left column: remove In Words block */}
@@ -233,17 +236,17 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
                       <>
                         <tr className="border-b border-gray-400">
                           <td className="py-2">CGST (9%)</td>
-                          <td className="py-2 text-right">₹ {invoice.cgst.toFixed(2)}</td>
+                          <td className="py-2 text-right">₹ {invoice.veshadCgst.toFixed(2)}</td>
                         </tr>
                         <tr className="border-b border-gray-400">
                           <td className="py-2">SGST (9%)</td>
-                          <td className="py-2 text-right">₹ {invoice.sgst.toFixed(2)}</td>
+                          <td className="py-2 text-right">₹ {invoice.veshadSgst.toFixed(2)}</td>
                         </tr>
                       </>
                     ) : (
                       <tr className="border-b border-gray-400">
                         <td className="py-2">IGST (18%)</td>
-                        <td className="py-2 text-right">₹ {invoice.igst?.toFixed(2) ?? "0.00"}</td>
+                        <td className="py-2 text-right">₹ {invoice.veshadIgst?.toFixed(2) ?? "0.00"}</td>
                       </tr>
                     )}
                     <tr className="border-t-2 border-gray-800">
@@ -269,13 +272,13 @@ export const InvoicePreview = ({ invoice, hidePaymentInfo }: InvoicePreviewProps
           <div className="grid grid-cols-2 gap-8 mt-12">
             <div className="flex flex-col items-center justify-end border-2 border-gray-800 rounded-lg min-h-[240px] p-16">
               <div className="flex flex-col items-center w-full justify-end h-full">
-                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 22 }} className="font-bold mb-1">Customer’s Seal and Signature</span>
+                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 14 }} className="font-bold mb-1">Customer’s Seal and Signature</span>
               </div>
             </div>
             <div className="flex flex-col items-center justify-end border-2 border-gray-800 rounded-lg min-h-[300px] p-16 pt-32">
               <div className="flex flex-col items-center w-full justify-end h-full mt-auto">
-                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 22 }} className="font-bold mb-1 mt-8">For Veshad And Company</span>
-                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 22 }} className="font-semibold mb-1">Authorized Signatory</span>
+                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 14 }} className="font-bold mb-1 mt-8">For Veshad And Company</span>
+                <span style={{ fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontSize: 14 }} className="font-semibold mb-1">Authorized Signatory</span>
               </div>
             </div>
           </div>

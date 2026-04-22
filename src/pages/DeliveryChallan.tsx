@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ChallanPreview from "../pages/ChallanPreview"; // Import the ChallanPreview component
 
 // Editable Delivery Challan form based on PDF structure
 const initialChallan = {
@@ -76,7 +77,7 @@ async function saveDC(dc) {
     }
     const method = dc.isEditing ? "PUT" : "POST";
     const url = dc.isEditing
-      ? `http://localhost:4000/api/delivery-challans/${dc.challanNo}`
+      ? `http://localhost:4000/api/delivery-challans/${encodeURIComponent(dc.challanNo)}`
       : "http://localhost:4000/api/delivery-challans";
     
     const response = await fetch(url, {
@@ -89,8 +90,15 @@ async function saveDC(dc) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to save delivery challan');
+      let errorText = await response.text();
+      let errorMsg = errorText;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.error || errorText;
+      } catch (e) {
+        // Not JSON, keep errorText
+      }
+      throw new Error(errorMsg || 'Failed to save delivery challan');
     }
 
     return await response.json();
@@ -139,6 +147,7 @@ export default function DeliveryChallan() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceOptions, setInvoiceOptions] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
 
   // Fetch invoice options on mount
   useEffect(() => {
@@ -196,7 +205,7 @@ export default function DeliveryChallan() {
       bill_to_address: inv.deliveryAddress_address || "",
       order_date: inv.date || "",
       dispatch_date: inv.dispatch_date || "",
-      eway_bill_no: inv.eway_bill_no || "",
+      eway_bill_no: inv.ewayBillRef || "",
       items: (inv.items || []).map(i => ({
       id: i.id || 0,
       item_description: i.item_description || "",
@@ -268,10 +277,22 @@ export default function DeliveryChallan() {
   const handleEdit = async (challanNo) => {
     try {
       const dcData = await getDCByNumber(challanNo);
+      // Fetch items from delivery_items table for this challanNo
+      let items = [];
+      try {
+        const itemsRes = await fetch(`http://localhost:4000/api/delivery-challans/${encodeURIComponent(challanNo)}/items`);
+        if (itemsRes.ok) {
+          items = await itemsRes.json();
+        } else {
+          items = dcData.items || [];
+        }
+      } catch {
+        items = dcData.items || [];
+      }
       setChallan({
         ...dcData,
         isEditing: true,
-        items: dcData.items || []
+        items: items
       });
       setInvoiceNumber(dcData.invoiceNumber || '');
       setShowForm(true);
@@ -296,6 +317,12 @@ export default function DeliveryChallan() {
       alert(error.message || 'Failed to delete delivery challan. Please try again.');
     }
   };
+
+  if (showPreview) {
+    return (
+      <ChallanPreview challan={challan} onBack={() => setShowPreview(false)} />
+    );
+  }
 
   if (!showForm) {
     return (
@@ -381,97 +408,179 @@ export default function DeliveryChallan() {
   }
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, serif', fontSize: 16, maxWidth: 900, margin: '0 auto', padding: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <img src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" alt="Logo" style={{ height: 80, marginRight: 16 }} />
+    <div style={{ fontFamily: 'Times New Roman, serif', fontSize: 16, maxWidth: 900, margin: '0 auto', padding: 24, position: 'relative', minHeight: '100vh', background: `url('/lovable-uploads/letterhead-bg.png') no-repeat right top`, backgroundSize: 'contain' }}>
+      {/* Company header */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 32, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}>
+            <img src="/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png" alt="Logo" style={{ height: 60, marginRight: 16 }} />
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: 22, color: '#2366a8', letterSpacing: 1 }}>VESHAD AND COMPANY</div>
+              <div style={{ color: '#2366a8', fontSize: 15, fontWeight: 500, lineHeight: 1.2 }}>
+                # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, 
+                BANGALORE - 560008, KARNATAKA, INDIA<br />
+                Landline:- (91) - 80 - 25272041,  
+                Mobile :- (91) 9036644721<br />
+                Email:- veshad@outlook.com / veshad.blr@gmail.com
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <hr style={{ border: 0, borderTop: '2px solid #2366a8', margin: '12px 0' }} />
+        </div>
         <h2 style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 22, flex: 1 }}>
           {challan.isEditing ? 'Edit Delivery Challan' : 'Delivery Challan'}
         </h2>
+        <div>
+          <div style={{ fontWeight: 'bold', fontSize: 16, letterSpacing: 1 }}>Company:</div>
+          <div style={{ fontWeight: 'bold', fontSize: 16, letterSpacing: 1 }}>VESHAD AND COMPANY</div>
+          <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.2 }}>
+            # 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE,
+            BANGALORE - 560008, KARNATAKA, INDIA<br />
+            Landline:- (91) - 80 - 25272041,    
+            Mobile :- (91) 9036644721<br />
+            Email:- veshad@outlook.com / veshad.blr@gmail.com<br />
+            GST: 29DXRPS1061J1ZS
+          </div>
+        </div>
+      <div>
+          <hr style={{ border: 0, borderTop: '2px solid #000', margin: '12px 0' }} />
       </div>
-      <div style={{ marginBottom: 12 }}>
+      {/* Delivery Challan No, Order Date, Dispatch Date fields in a single flex row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, width: '100%' }}>
+        <div style={{ flex: 1, marginRight: 12 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Delivery Challan No:
+          </label>
+          <input
+            name="challanNo"
+            value={challan.challanNo || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+            disabled={challan.isEditing}
+          />
+        </div>
+        <div style={{ flex: 1, marginRight: 12 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Order Date:
+          </label>
+          <input
+            name="order_date"
+            type="date"
+            value={challan.order_date || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+            disabled={challan.isEditing}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontWeight: 'bold', fontSize: 16, color: '#2366a8', letterSpacing: 1, display: 'block', marginBottom: 4 }}>
+            Dispatch Date:
+          </label>
+          <input
+            name="dispatch_date"
+            type="date"
+            value={challan.dispatch_date || ""}
+            onChange={handleChange}
+            style={{ width: '100%', fontSize: 16, padding: '4px 8px' }}
+          />
+        </div>
+      </div>
+      <div>
+          <hr style={{ border: 0, borderTop: '2px solid #000', margin: '12px 0' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <label>Invoice Number: </label>
         <select
           value={invoiceNumber}
           onChange={handleSelectInvoice}
           onClick={handleFetchInvoices}
           style={{ width: 220, fontSize: 16 }}
+          disabled={challan.isEditing}
         >
           <option value="">Select Invoice</option>
           {invoiceOptions.map(inv => (
-        <option key={inv.invoiceNumber} value={inv.invoiceNumber}>
-          {inv.invoiceNumber || 'No Number'}
-        </option>
+            <option key={inv.invoiceNumber} value={inv.invoiceNumber}>
+              {inv.invoiceNumber || 'No Number'}
+            </option>
           ))}
         </select>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-         <div>
           <label>
-            Dispatch Date:{" "}
-            <input
-              name="dispatch_date"
-              type="date"
-              value={challan.dispatch_date || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-            />
+            E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} disabled={challan.isEditing} />
           </label>
-        </div>
-         <div>
-          <label>
-            Order Date:{" "}
-            <input
-              name="order_date"
-              type="date"
-              value={challan.order_date || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-            />
-          </label>
-        </div>
-      </div>
+        <div><br /></div>
+         </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <label>
-            Bill To Address:{" "}
-            <input
-              name="bill_to_address"
-              value={challan.bill_to_address || ""}
-              onChange={handleChange}
-              style={{ width: 150, fontSize: 16 }}
-            />
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: "block", fontSize: 16, marginBottom: 4 }}>
+            Bill To Address:
           </label>
+          <textarea
+            name="bill_to_address"
+            value={challan.bill_to_address || ""}
+            onChange={handleChange}
+            rows={3}
+            style={{ width: 300, fontSize: 16 }}
+            disabled
+          />
         </div>
-        <div>
-          <label>E-way Bill No: <input name="eway_bill_no" value={challan.eway_bill_no} onChange={handleChange} style={{ width: 150, fontSize: 16 }} /></label>
         </div>
-        </div>
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }} border={1}>
+      <table className="table-auto w-full text-sm border border-black" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 , justifyContent: 'space-between'}} border={1}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Remarks</th>
-            <th>Action</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 300, border: '1px solid #000' }}>Description</th>
+            <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Quantity</th>
+            <th style={{ textAlign: 'left', padding: '8px', minWidth: 160, border: '1px solid #000' }}>Remarks</th>
+            <th style={{ textAlign: 'center', padding: '8px', minWidth: 80, border: '1px solid #000' }}>Action</th>
           </tr>
         </thead>
         <tbody>
           {challan.items.map((item, idx) => (
             <tr key={idx}>
-              <td><input name="item_description" value={item.item_description} onChange={e => handleItemChange(idx, e)} style={{ width: 200, fontSize: 16 }} /></td>
-              <td><input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 60, fontSize: 16 }} /></td>
-              <td><input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: 120, fontSize: 16 }} /></td>
-              <td><button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 16, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button></td>
+              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <textarea
+                  name="item_description"
+                  value={item.item_description}
+                  onChange={e => handleItemChange(idx, e)}
+                  style={{ width: '100%', fontSize: 16, resize: 'vertical', minWidth: 300, boxSizing: 'border-box' }}
+                  rows={2}
+                  wrap="soft"
+                />
+              </td>
+              <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <input name="quantity" value={item.quantity} onChange={e => handleItemChange(idx, e)} style={{ width: 60, fontSize: 16, textAlign: 'center' }} />
+              </td>
+              <td style={{ verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <input name="remarks" value={item.remarks} onChange={e => handleItemChange(idx, e)} style={{ width: '100%', minWidth: 120, fontSize: 16 }} />
+              </td>
+              <td style={{ textAlign: 'center', verticalAlign: 'top', padding: '6px', border: '1px solid #000' }}>
+                <button type="button" onClick={() => removeItem(idx)} style={{ fontSize: 16, background: '#e53e3e', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>Remove</button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
       <button type="button" onClick={addItem} style={{ fontSize: 16, background: '#3182ce', color: 'white', border: 'none', borderRadius: 4, padding: '6px 18px', cursor: 'pointer', marginBottom: 16 }}>Add Item</button>
+      <div><br /></div>
+      <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.2, textAlign: "center",  }}>
+            Confirm receipt of above in good order.
+      </div>
+      <div>
+          <div><br /></div>
+            Name: <br />
+            Signature: 
+            <div><br /></div>
+
+            Date:<br />
+            Company Seal: 
+
+          </div>
       <div style={{ textAlign: 'center', marginTop: 24 }}>
         <button type="button" onClick={handleSave} style={{ fontSize: 18, background: '#38a169', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer', marginRight: 16 }}>
           {challan.isEditing ? 'Update DC' : 'Save DC'}
         </button>
-        <button type="button" onClick={() => setShowForm(false)} style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Cancel</button>
+        <button type="button" onClick={() => setShowForm(false)} style={{ fontSize: 18, background: '#718096', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer', marginRight: 16 }}>Cancel</button>
+        <button type="button" onClick={() => setShowPreview(true)} style={{ fontSize: 18, background: '#3182ce', color: 'white', border: 'none', borderRadius: 4, padding: '8px 32px', cursor: 'pointer' }}>Preview</button>
       </div>
     </div>
   );

@@ -15,10 +15,12 @@ import TaxSummary from "./pages/Tax";
 import Purchases from "./pages/Purchases";
 import PriceComparison from "./pages/PriceComparison";
 import VendorsInvoices from "./pages/VendorsInvoices";
+import VendorsNames from "./pages/VendorsNames";
 import DeliveryChallan from "./pages/DeliveryChallan";
 import CompanyLetterHead from "./pages/CompanyLetterHead";
 import PendingInvoices from "./pages/PendingInvoices";
 import BankTransactions from "./pages/BankTransactions";
+import VendorsItems from "./pages/VendorsItems";
 
 const queryClient = new QueryClient();
 
@@ -49,12 +51,14 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/invoices" element={<InvoiceList />} />
                 <Route path="/invoices/create" element={<CreateInvoice />} />
-                <Route path="/invoices/edit/:invoiceNumber*" element={<EditInvoice />} />
+                <Route path="/invoices/edit/:invoiceNumber" element={<EditInvoice />} />
                 <Route path="/invoices/view/:invoiceNumber" element={<ViewInvoice />} />
                 <Route path="/tax" element={<TaxSummary />} />
                 <Route path="/purchases" element={<Purchases />} />
                 <Route path="/price-comparison" element={<PriceComparison />} />
                 <Route path="/vendors-invoices" element={<VendorsInvoices />} />
+                <Route path="/vendors-names" element={<VendorsNames />} />
+                <Route path="/vendors-items" element={<VendorsItems />} />
                 <Route path="/delivery-challan" element={<DeliveryChallan />} />
                 <Route path="/letter" element={<CompanyLetterHead />} />
                 <Route path="/pending-invoices" element={<PendingInvoices />} />

@@ -19,10 +19,11 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 const InvoiceStatusTab = lazy(() => import('@/components/InvoiceStatusTab'));
 
 interface Invoice {
-  notes: string;
+  id: string;
   invoiceNumber: string;
   date: string;
   revision: number;
+  gst: string;
   deliveryAddress_name: string;
   deliveryAddress_address: string;
   deliveryAddress_city: string;
@@ -33,25 +34,39 @@ interface Invoice {
   hsnSac: string;
   poRefNo: string;
   paymentReceived: number;
-  totalNet: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
-  grandTotal: number;
-  amountInWords: string; // ✅ string, not number
   balanceDue: number;
-  paymentStatus: string;
-  paymentBank?: string;
-  paymentBankRef?: string;
-  paymentDate?: string;
-  miscNotes?: string; // <-- Added property
+  totalNet: number;
+  grandTotal: number;
+  amountInWords: string;
+  paymentStatus?: 'Paid' | 'Pending';
+  paymentBank?: string; 
+  paymentRecvdDate?: string; 
+  paymentBankRef?: string; 
+  paymentDate?: string; 
+  ewayBillRef?: string; 
   items?: {
-    id: number,
-    item_description: string,
-    quantity: number,
-    unitPrice: number,
-    total: number
-  }[];
+    id: number;
+    item_description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];  
+  supplier: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    phone: string;
+    email: string;
+  };
+  veshadCgst: number;
+  veshadSgst: number;
+  veshadIgst: number;
+  notes?: string;
+  vendor_id?: number;
+  profitPercent?: number;
 }
 
 const InvoiceList = () => {
@@ -61,7 +76,7 @@ const InvoiceList = () => {
   // New state for month selection and GST
   const [months, setMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [gstDetails, setGstDetails] = useState<{ cgst: number; sgst: number; igst: number } | null>(null);
+  const [gstDetails, setGstDetails] = useState<{ veshadCgst: number; veshadSgst: number; veshadIgst: number } | null>(null);
   const [editPaymentInvoice, setEditPaymentInvoice] = useState<Invoice | null>(null);
   const [paymentForm, setPaymentForm] = useState({
     paymentReceived: 0,
@@ -69,6 +84,7 @@ const InvoiceList = () => {
     paymentBankRef: '',
     paymentDate: '',
     paymentStatus: 'Pending',
+    notes: '', // Add miscNotes to paymentForm
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
@@ -79,7 +95,6 @@ const InvoiceList = () => {
     paymentDate: '',
     notes: '',
     activeTab: 'payment' as 'payment' | 'misc',
-    miscNotes: '', // Ensure miscNotes is always initialized
   });
   const [exporting, setExporting] = useState(false);
   const [years, setYears] = useState<string[]>([]);
@@ -131,9 +146,9 @@ const InvoiceList = () => {
         if (!response.ok) throw new Error('Failed to fetch GST');
         const data = await response.json();
         setGstDetails({
-          cgst: data.cgst ?? 0,
-          sgst: data.sgst ?? 0,
-          igst: data.igst ?? 0,
+          veshadCgst: data.veshadCgst ?? 0,
+          veshadSgst: data.veshadSgst ?? 0,
+          veshadIgst: data.veshadIgst ?? 0,
         });
       } catch (err) {
         setGstDetails(null);
@@ -204,6 +219,7 @@ const InvoiceList = () => {
       paymentBankRef: invoice.paymentBankRef ?? '',
       paymentDate: invoice.paymentDate ?? '',
       paymentStatus: invoice.paymentStatus ?? 'Pending',
+      notes: invoice.notes ?? '', // Initialize miscNotes
     });
   };
 
@@ -222,6 +238,7 @@ const InvoiceList = () => {
       paymentBankRef: paymentForm.paymentBankRef,
       paymentDate: paymentForm.paymentDate,
       paymentStatus: paymentForm.paymentStatus,
+      notes: paymentForm.notes,
       balanceDue: (editPaymentInvoice.grandTotal ?? 0) - Number(paymentForm.paymentReceived),
     };
     try {
@@ -250,8 +267,7 @@ const InvoiceList = () => {
       paymentBankRef: invoice.paymentBankRef || '',
       paymentReceived: invoice.paymentReceived?.toString() || '',
       paymentDate: invoice.paymentDate ? format(new Date(invoice.paymentDate), 'yyyy-MM-dd') : '',
-      notes: typeof invoice.notes === 'string' ? invoice.notes : '', // Defensive: always string
-      miscNotes: typeof invoice.miscNotes === 'string' ? invoice.miscNotes : '', // Defensive: always string
+      notes: typeof invoice.notes === 'string' ? invoice.notes : '', 
       activeTab: 'payment', // Default to Payment Info tab
     });
     setEditModalOpen(true);
@@ -261,6 +277,9 @@ const InvoiceList = () => {
   const handleEditFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditFields(prev => ({ ...prev, [name]: value }));
+    if (name === 'notes') {
+      setEditInvoice(prev => prev ? { ...prev, notes: value } : prev);
+    }
   };
 
   // Save payment info
@@ -277,7 +296,7 @@ const InvoiceList = () => {
         paymentBankRef: editFields.paymentBankRef,
         paymentReceived: Number(editFields.paymentReceived) || 0,
         paymentDate: editFields.paymentDate || null,
-        miscNotes: editFields.miscNotes || '', // Save Misc Notes from modal
+        notes: editFields.notes !== undefined ? editFields.notes : latestInvoice.notes || '', 
       };
       const res = await fetch(`http://localhost:4000/api/invoices/${encodeURIComponent(editInvoice.invoiceNumber)}`, {
         method: 'PUT',
@@ -287,10 +306,10 @@ const InvoiceList = () => {
       if (!res.ok) throw new Error('Failed to update payment info');
       // Update frontend state
       setInvoices((prev) => prev.map(inv => inv.invoiceNumber === updated.invoiceNumber ? { ...inv, ...updated } : inv));
+      setEditInvoice(prev => prev ? { ...prev, ...updated } : prev);
+      setEditFields(prev => ({ ...prev, miscNotes: updated.miscNotes }));
       setEditModalOpen(false);
       toast({ title: 'Payment Info Updated', description: `Invoice ${updated.invoiceNumber} payment info updated.` });
-      // Force EditInvoice to refetch by navigating to edit page with a unique param
-      navigate(`/invoices/edit/${encodeURIComponent(updated.invoiceNumber)}?refresh=${Date.now()}`);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update payment info.' });
     }
@@ -300,15 +319,18 @@ const InvoiceList = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
+          <Suspense fallback={<div className="animate-pulse bg-gray-200 rounded h-12 w-56"></div>}>
+            <InvoiceStatusTab />
+          </Suspense>
           <SidebarTrigger />
           <h1 className="text-3xl font-bold text-gray-900">All Invoices</h1>
         </div>
         <div className="flex flex-col gap-2">
-          <Suspense fallback={<div className="animate-pulse bg-gray-200 rounded h-12 w-56"></div>}>
-            <InvoiceStatusTab />
-          </Suspense>
           <div className="text-right">
             <div className="text-xl font-semibold text-blue-800">
+              Total Profit: ₹{invoices.reduce((sum, inv) => sum + ((inv.profitPercent ?? 0) || 0), 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-sm font-medium text-green-800">
               Total Invoiced: ₹{invoices.reduce((sum, inv) => sum + ((inv.grandTotal ?? 0) || 0), 0).toLocaleString('en-IN')}
             </div>
             <div className="text-sm font-medium text-green-800">
@@ -346,9 +368,9 @@ const InvoiceList = () => {
           })}
         </select>
         <div className="ml-6 text-lg font-semibold text-purple-800 flex gap-6">
-          <span>CGST: {gstDetails ? `₹${gstDetails.cgst.toLocaleString('en-IN')}` : '—'}</span>
-          <span>SGST: {gstDetails ? `₹${gstDetails.sgst.toLocaleString('en-IN')}` : '—'}</span>
-          <span>IGST: {gstDetails ? `₹${gstDetails.igst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>CGST: {gstDetails ? `₹${gstDetails.veshadCgst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>SGST: {gstDetails ? `₹${gstDetails.veshadSgst.toLocaleString('en-IN')}` : '—'}</span>
+          <span>IGST: {gstDetails ? `₹${gstDetails.veshadIgst.toLocaleString('en-IN')}` : '—'}</span>
         </div>
       </div>
 
@@ -400,11 +422,11 @@ const InvoiceList = () => {
                   <span className="text-gray-700 font-medium truncate min-w-0 flex-grow">{invoice.deliveryAddress_name}</span>
                   {invoice.deliveryAddress_state?.trim().toLowerCase() === "karnataka" ? (
                     <>
-                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">CGST: ₹{invoice.cgst?.toLocaleString('en-IN') ?? '-'}</span>
-                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5 ml-1">SGST: ₹{invoice.sgst?.toLocaleString('en-IN') ?? '-'}</span>
+                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">CGST: ₹{invoice.veshadCgst?.toLocaleString('en-IN') ?? '-'}</span>
+                      <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5 ml-1">SGST: ₹{invoice.veshadSgst?.toLocaleString('en-IN') ?? '-'}</span>
                     </>
                   ) : (
-                    <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">IGST: ₹{invoice.igst?.toLocaleString('en-IN') ?? '-'}</span>
+                    <span className="text-xs text-purple-800 bg-purple-50 rounded px-1 py-0.5">IGST: ₹{invoice.veshadIgst?.toLocaleString('en-IN') ?? '-'}</span>
                   )}
                   <span className="flex items-center text-xs text-gray-500 ml-2">
                     <Calendar className="h-3 w-3 mr-1" />
@@ -424,13 +446,17 @@ const InvoiceList = () => {
               {/* Row 2: Payment info block, compact */}
               <div className="flex flex-wrap items-center justify-between gap-2 w-full mt-1 bg-blue-50 rounded border border-blue-100 p-1">
                 <span className="text-xs text-gray-500">Bank: <span className="font-medium text-gray-700">{invoice.paymentBank || '-'}</span></span>
-                <span className="text-xs text-gray-500">Ref ID: <span className="font-medium text-gray-700">{invoice.paymentBankRef || '-'}</span></span>
+                <span className="text-xs text-gray-500">Ref ID: <span
+                  className="font-medium text-gray-700 inline-block max-w-[120px] truncate align-middle cursor-pointer"
+                  title={invoice.paymentBankRef || '-'}
+                >{invoice.paymentBankRef || '-'}</span></span>
                 <span className="text-xs text-gray-500">Status: {(invoice.grandTotal - (invoice.paymentReceived ?? 0)) !== 0 ? (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700">Pending</span>) : (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-700">Paid Fully</span>)}</span>
                 <span className="text-xs text-gray-500">Received: <span className="font-medium text-gray-700">₹{(invoice.paymentReceived ?? 0).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Due: <span className="font-medium text-gray-700">₹{((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)).toLocaleString('en-IN')}</span></span>
+                <span className="text-xs text-gray-500">Profit: <span className="font-medium text-gray-700">₹{(invoice.profitPercent ?? 0).toLocaleString('en-IN')}</span></span>
                 <span className="text-xs text-gray-500">Payment Recvd Date: <span className="font-medium text-gray-700">{invoice.paymentDate ? format(new Date(invoice.paymentDate), 'dd-MMM-yyyy') : '-'}</span></span>
-                {invoice.miscNotes && (
-                  <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.miscNotes}</span></span>
+                {invoice.notes && (
+                  <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.notes}</span></span>
                 )}
               </div>
             </Card>
@@ -458,6 +484,14 @@ const InvoiceList = () => {
               <option value="Pending">Pending</option>
               <option value="Paid">Paid</option>
             </select>
+            <label className="text-xs font-medium">Misc Notes</label>
+            <textarea
+              className="border rounded w-full p-2 min-h-[60px] text-sm"
+              value={typeof paymentForm.notes === 'string' ? paymentForm.notes : (paymentForm.notes !== undefined && paymentForm.notes !== null ? String(paymentForm.notes) : '')}
+              name="notes"
+              placeholder="Enter any miscellaneous notes here..."
+              onChange={e => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closePaymentModal}>Cancel</Button>
@@ -516,10 +550,10 @@ const InvoiceList = () => {
                 <div>
                   <Label htmlFor="miscNotes">Misc Notes</Label>
                   <textarea
-                    id="miscNotes"
-                    name="miscNotes"
+                    id="notes"
+                    name="notes"
                     className="border rounded w-full p-2 min-h-[80px] text-sm"
-                    value={editFields.miscNotes || ''}
+                    value={editFields.notes || ''}
                     onChange={handleEditFieldChange}
                   />
                 </div>
