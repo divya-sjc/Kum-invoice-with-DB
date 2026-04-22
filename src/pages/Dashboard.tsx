@@ -400,23 +400,7 @@ const Dashboard: React.FC = () => {
           <TabsTrigger value="bank">Bank Balances</TabsTrigger>
         </TabsList>
         <TabsContent value="main">
-          {/* Row 1: FY Dropdown - Full Width */}
-          <div className="flex items-center justify-center gap-3 mb-4 p-2 bg-gray-50 rounded">
-            <span className="font-medium text-base" style={{ color: '#4472C4' }}>Select Financial Year:</span>
-            <select
-              id="fy-select"
-              value={selectedFy}
-              onChange={e => setSelectedFy(e.target.value)}
-              className="border rounded px-3 py-1 text-base"
-              style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
-            >
-              {fyOptions.map(fy => (
-                <option key={fy} value={fy}>{fy}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Row 2: 2-Column Grid */}
+          {/* Row 1: 2-Column Grid - FY dropdown moves to top of right column */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* LEFT COLUMN: Pending Invoices + FY Invoice Status (stacked vertically) */}
             <div className="flex flex-col gap-4">
@@ -483,10 +467,23 @@ const Dashboard: React.FC = () => {
 
             {/* RIGHT COLUMN: GST Cards + Chart (stacked vertically) */}
             <div className="flex flex-col gap-4">
-              {/* GST Collected Till Date */}
+              {/* FY Dropdown + GST Collected Till Date */}
               <Card style={{ borderBottom: '4px solid #4CAF50' }}>
                 <CardHeader>
-                  <CardTitle style={{ color: '#4472C4' }}>GST Collected Till Date ({selectedFy})</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle style={{ color: '#4472C4' }}>GST Collected Till Date ({selectedFy})</CardTitle>
+                    <select
+                      id="fy-select"
+                      value={selectedFy}
+                      onChange={e => setSelectedFy(e.target.value)}
+                      className="border rounded px-2 py-1 text-xs"
+                      style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
+                    >
+                      {fyOptions.map(fy => (
+                        <option key={fy} value={fy}>{fy}</option>
+                      ))}
+                    </select>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2">
