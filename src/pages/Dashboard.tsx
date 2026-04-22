@@ -392,328 +392,324 @@ const Dashboard: React.FC = () => {
   if (loading || !selectedFy || !selectedFy.includes('-')) return <div className="p-6">Loading dashboard...</div>;
 
   return (
-  <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
       <h1 className="text-3xl font-bold text-gray-900 mb-4">Dashboard</h1>
-  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="main">Main</TabsTrigger>
           <TabsTrigger value="bank">Bank Balances</TabsTrigger>
         </TabsList>
         <TabsContent value="main">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Pending Invoices */}
-            <Card style={{ borderBottom: '4px solid #FF9800' }}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle style={{ color: '#4472C4' }}>Pending Payment Status Invoices</CardTitle>
-                <button
-                  className="ml-4 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                  onClick={() => { setLoading(true); fetchPending(); setTimeout(() => setLoading(false), 500); }}
-                  title="Refresh Pending Invoices"
-                >
-                  Refresh
-                </button>
-              </CardHeader>
-              <CardContent>
-                <table className="min-w-full border text-sm">
-                  <thead>
-                    <tr style={{ backgroundColor: '#4472C4', color: '#fff' }}>
-                      <th className="border px-2 py-1">Invoice No</th>
-                      <th className="border px-2 py-1">Date</th>
-                      <th className="border px-2 py-1">Client</th>
-                      <th className="border px-2 py-1">Grand Total</th>
-                      <th className="border px-2 py-1">Balance Due</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(pending || []).map(inv => (
-                      <tr key={inv.invoiceNumber}>
-                        <td className="border px-2 py-1">{inv.invoiceNumber}</td>
-                        <td className="border px-2 py-1">{inv.date}</td>
-                        <td className="border px-2 py-1">{inv.deliveryAddress_name}</td>
-                        <td className="border px-2 py-1">₹{inv.grandTotal?.toLocaleString('en-IN')}</td>
-                        <td className={`border px-2 py-1${inv.balanceDue > 0 ? ' text-red-600 font-bold' : ''}`}>₹{inv.balanceDue?.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                    {(!pending || pending.length === 0) && <tr><td colSpan={5} className="text-center text-gray-500 py-2">No pending invoices</td></tr>}
-                  </tbody>
-                  {/* Total Amount Due row */}
-                  {pending && pending.length > 0 && (
-                    <tfoot>
-                      <tr>
-                        <td colSpan={4} className="border px-2 py-2 text-right font-bold">Total Amount Due:</td>
-                        <td className="border px-2 py-2 text-red-700 font-bold">₹{pending.reduce((sum, inv) => sum + (inv.balanceDue ?? 0), 0).toLocaleString('en-IN')}</td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </CardContent>
-            </Card>
-            {/* GST Collected Cards Side by Side and Chart Below */}
-            <div className="flex flex-col gap-6 w-full">
-              <div className="flex flex-col md:flex-row gap-6 w-full">
-                {/* FY Dropdown Filter Row */}
-                <div className="mb-2 flex items-center gap-2 w-full">
-                  <label htmlFor="fy-select" className="font-medium text-xs" style={{ color: '#4472C4' }}>Select Financial Year:</label>
-                  <select
-                    id="fy-select"
-                    value={selectedFy}
-                    onChange={e => setSelectedFy(e.target.value)}
-                    className="border rounded px-2 py-1 text-xs"
-                    style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
+          {/* Row 1: FY Dropdown - Full Width */}
+          <div className="flex items-center justify-center gap-3 mb-4 p-2 bg-gray-50 rounded">
+            <span className="font-medium text-base" style={{ color: '#4472C4' }}>Select Financial Year:</span>
+            <select
+              id="fy-select"
+              value={selectedFy}
+              onChange={e => setSelectedFy(e.target.value)}
+              className="border rounded px-3 py-1 text-base"
+              style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
+            >
+              {fyOptions.map(fy => (
+                <option key={fy} value={fy}>{fy}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Row 2: 2-Column Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {/* LEFT COLUMN: Pending Invoices + FY Invoice Status (stacked vertically) */}
+            <div className="flex flex-col gap-4">
+              {/* Pending Payment Status Invoices */}
+              <Card style={{ borderBottom: '4px solid #FF9800' }}>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle style={{ color: '#4472C4' }}>Pending Payment Status Invoices</CardTitle>
+                  <button
+                    className="ml-4 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                    onClick={() => { setLoading(true); fetchPending(); setTimeout(() => setLoading(false), 500); }}
+                    title="Refresh Pending Invoices"
                   >
-                    {fyOptions.map(fy => (
-                      <option key={fy} value={fy}>{fy}</option>
-                    ))}
-                  </select>
-                </div>
-                <Card className="flex-1" style={{ borderBottom: '4px solid #4CAF50' }}>
-                  <CardHeader>
-                    <CardTitle style={{ color: '#4472C4' }}>
-                      GST Collected Till Date 
-                      (<select
-                        className="bg-transparent text-blue-500 font-semibold outline-none"
-                        value={selectedFy}
-                        onChange={e => setSelectedFy(e.target.value)}
-                      >
-                        {fyOptions.map(fy => (
-                          <option key={fy} value={fy}>{fy}</option>
+                    Refresh
+                  </button>
+                </CardHeader>
+                <CardContent className="p-2">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border text-xs">
+                      <thead>
+                        <tr style={{ backgroundColor: '#4472C4', color: '#fff' }}>
+                          <th className="border px-1 py-1">Inv No</th>
+                          <th className="border px-1 py-1">Date</th>
+                          <th className="border px-1 py-1">Client</th>
+                          <th className="border px-1 py-1 text-right">Total</th>
+                          <th className="border px-1 py-1 text-right">Due</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(pending || []).slice(0, 10).map(inv => (
+                          <tr key={inv.invoiceNumber}>
+                            <td className="border px-1 py-1">{inv.invoiceNumber}</td>
+                            <td className="border px-1 py-1">{inv.date}</td>
+                            <td className="border px-1 py-1 truncate max-w-[100px]">{inv.deliveryAddress_name}</td>
+                            <td className="border px-1 py-1 text-right">₹{inv.grandTotal?.toLocaleString('en-IN')}</td>
+                            <td className={`border px-1 py-1 text-right${inv.balanceDue > 0 ? ' text-red-600 font-bold' : ''}`}>₹{inv.balanceDue?.toLocaleString('en-IN')}</td>
+                          </tr>
                         ))}
-                      </select>)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-2">
-                      <span>CGST: ₹{gstFY?.veshadCgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>SGST: ₹{gstFY?.veshadSgst?.toLocaleString('en-IN') ?? '—'}</span>
-                      <span>IGST: ₹{gstFY?.veshadIgst?.toLocaleString('en-IN') ?? '—'}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="flex-1" style={{ borderBottom: '4px solid #2196F3' }}>
-                  <CardHeader>
-                    <CardTitle style={{ color: '#4472C4' }}>Total GST ITC (Vendor Invoices)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="flex-1">
-                        <div className="font-semibold mb-2">For Financial Year</div>
-                        <div className="flex flex-col gap-2">
-                          <span>CGST Input: ₹{vendorGstFY?.cgst?.toLocaleString('en-IN') ?? '—'}</span>
-                          <span>SGST Input: ₹{vendorGstFY?.sgst?.toLocaleString('en-IN') ?? '—'}</span>
-                          <span>IGST Input: ₹{vendorGstFY?.igst?.toLocaleString('en-IN') ?? '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              {/* Chart below GST cards, side by side with FY Invoice Status */}
-              <div className="flex flex-col md:flex-row gap-6 w-full mt-4">
-                <div style={{ width: '75%' }}>
-                  <Card style={{ borderBottom: '4px solid #E91E63' }}>
-                    <CardHeader>
-                      <CardTitle style={{ color: '#4472C4' }}>Purchases vs Invoice Values (Year-Wise)</CardTitle>
-                      <div className="mt-2 flex items-center gap-2">
-                        <label htmlFor="comparison-year" className="font-medium text-xs">Year:</label>
-                        <select
-                          id="comparison-year"
-                          className="border rounded px-2 py-1 text-xs"
-                          value={comparisonYear}
-                          onChange={e => setComparisonYear(e.target.value)}
-                          style={{ minWidth: 80 }}
-                        >
-                          {availableYears.map(y => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                        {/* Chart type selector */}
-                        <label htmlFor="chart-type" className="font-medium text-xs ml-4">Chart Type:</label>
-                        <select
-                          id="chart-type"
-                          className="border rounded px-2 py-1 text-xs"
-                          value={chartType}
-                          onChange={e => setChartType(e.target.value as 'line' | 'bar')}
-                          style={{ minWidth: 80 }}
-                        >
-                          <option value="line">Line</option>
-                          <option value="bar">Bar</option>
-                        </select>
-                        {/* Color selectors */}
-                        <label htmlFor="invoice-color" className="font-medium text-xs ml-4">Invoice Color:</label>
-                        <input
-                          id="invoice-color"
-                          type="color"
-                          value={invoiceColor}
-                          onChange={e => setInvoiceColor(e.target.value)}
-                          className="ml-1"
-                          style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                        />
-                        <label htmlFor="purchase-color" className="font-medium text-xs ml-4">Purchase Color:</label>
-                        <input
-                          id="purchase-color"
-                          type="color"
-                          value={purchaseColor}
-                          onChange={e => setPurchaseColor(e.target.value)}
-                          className="ml-1"
-                          style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {comparisonLoading ? (
-                        <div>Loading graph...</div>
-                      ) : comparisonError ? (
-                        <div className="text-red-600">{comparisonError}</div>
-                      ) : (
-                        <div style={{ width: "100%", height: 130 }}>
-                          <ResponsiveContainer width="100%" height={130}>
-                            {chartType === 'line' ? (
-                              <LineChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <XAxis dataKey="month" tickFormatter={m => {
-                                  try {
-                                    return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
-                                  } catch {
-                                    return m;
-                                  }
-                                }} />
-                                <YAxis tickFormatter={v => {
-                                  if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
-                                  if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
-                                  if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
-                                  return `₹${v}`;
-                                }} />
-                                <Tooltip formatter={v => {
-                                  if (typeof v !== 'number') return v;
-                                  if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
-                                  if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
-                                  if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
-                                  return `₹${v}`;
-                                }} labelFormatter={m => {
-                                  try {
-                                    return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
-                                  } catch {
-                                    return m;
-                                  }
-                                }} />
-                                <Legend />
-                                <Line type="monotone" dataKey="invoice" stroke={invoiceColor} name="Invoice Value" strokeWidth={3} dot={{ r: 4 }} />
-                                <Line type="monotone" dataKey="purchase" stroke={purchaseColor} name="Purchase Value" strokeWidth={3} dot={{ r: 4 }} />
-                              </LineChart>
-                            ) : (
-                              <BarChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <XAxis dataKey="month" tickFormatter={m => {
-                                  try {
-                                    return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
-                                  } catch {
-                                    return m;
-                                  }
-                                }} />
-                                <YAxis tickFormatter={v => {
-                                  if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
-                                  if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
-                                  if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
-                                  return `₹${v}`;
-                                }} />
-                                <Tooltip formatter={v => {
-                                  if (typeof v !== 'number') return v;
-                                  if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
-                                  if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
-                                  if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
-                                  return `₹${v}`;
-                                }} labelFormatter={m => {
-                                  try {
-                                    return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
-                                  } catch {
-                                    return m;
-                                  }
-                                }} />
-                                <Legend />
-                                <Bar dataKey="invoice" fill={invoiceColor} name="Invoice Value" />
-                                <Bar dataKey="purchase" fill={purchaseColor} name="Purchase Value" />
-                              </BarChart>
-                            )}
-                          </ResponsiveContainer>
-                        </div>
+                        {(!pending || pending.length === 0) && <tr><td colSpan={5} className="text-center text-gray-500 py-2">No pending invoices</td></tr>}
+                      </tbody>
+                      {pending && pending.length > 0 && (
+                        <tfoot>
+                          <tr>
+                            <td colSpan={4} className="border px-1 py-1 text-right font-bold">Total:</td>
+                            <td className="border px-1 py-1 text-red-700 font-bold">₹{pending.reduce((sum, inv) => sum + (inv.balanceDue ?? 0), 0).toLocaleString('en-IN')}</td>
+                          </tr>
+                        </tfoot>
                       )}
-                    </CardContent>
-                  </Card>
-                </div>
-                <div style={{ width: '50%' }}>
-                  <Card style={{ borderBottom: '4px solid #9C27B0' }}>
-                    <CardHeader><CardTitle style={{ color: '#4472C4', fontSize: '1em' }}>Financial Year Invoice Status ({selectedFy})</CardTitle></CardHeader>
-                    <CardContent>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* FY Invoice Status */}
+              <Card style={{ borderBottom: '4px solid #9C27B0' }}>
+                <CardHeader><CardTitle style={{ color: '#4472C4', fontSize: '1em' }}>Financial Year Invoice Status ({selectedFy})</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2">
+                    <span style={{ fontSize: '0.85em' }}>Total Invoices Created: <b>{totalInvoices}</b></span>
+                    <span style={{ fontSize: '0.85em' }}>Total Amount Received: <b>₹{totalReceived.toLocaleString('en-IN')}</b></span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* RIGHT COLUMN: GST Cards + Chart (stacked vertically) */}
+            <div className="flex flex-col gap-4">
+              {/* GST Collected Till Date */}
+              <Card style={{ borderBottom: '4px solid #4CAF50' }}>
+                <CardHeader>
+                  <CardTitle style={{ color: '#4472C4' }}>GST Collected Till Date ({selectedFy})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2">
+                    <span>CGST: ₹{gstFY?.veshadCgst?.toLocaleString('en-IN') ?? '—'}</span>
+                    <span>SGST: ₹{gstFY?.veshadSgst?.toLocaleString('en-IN') ?? '—'}</span>
+                    <span>IGST: ₹{gstFY?.veshadIgst?.toLocaleString('en-IN') ?? '—'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* GST ITC */}
+              <Card className="flex-1" style={{ borderBottom: '4px solid #2196F3' }}>
+                <CardHeader>
+                  <CardTitle style={{ color: '#4472C4' }}>Total GST ITC (Vendor Invoices)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                      <div className="font-semibold mb-2">For Financial Year</div>
                       <div className="flex flex-col gap-2">
-                        <span style={{ fontSize: '0.85em' }}>Total Invoices Created: <b>{totalInvoices}</b></span>
-                        <span style={{ fontSize: '0.85em' }}>Total Amount Received: <b>₹{totalReceived.toLocaleString('en-IN')}</b></span>
+                        <span>CGST Input: ₹{vendorGstFY?.cgst?.toLocaleString('en-IN') ?? '—'}</span>
+                        <span>SGST Input: ₹{vendorGstFY?.sgst?.toLocaleString('en-IN') ?? '—'}</span>
+                        <span>IGST Input: ₹{vendorGstFY?.igst?.toLocaleString('en-IN') ?? '—'}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Purchase vs Invoice Chart */}
+              <Card style={{ borderBottom: '4px solid #E91E63' }}>
+                <CardHeader>
+                  <CardTitle style={{ color: '#4472C4' }}>Purchases vs Invoice Values (Year-Wise)</CardTitle>
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <label htmlFor="comparison-year" className="font-medium text-xs">Year:</label>
+                    <select
+                      id="comparison-year"
+                      className="border rounded px-2 py-1 text-xs"
+                      value={comparisonYear}
+                      onChange={e => setComparisonYear(e.target.value)}
+                      style={{ minWidth: 80 }}
+                    >
+                      {availableYears.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    {/* Chart type selector */}
+                    <label htmlFor="chart-type" className="font-medium text-xs ml-4">Chart Type:</label>
+                    <select
+                      id="chart-type"
+                      className="border rounded px-2 py-1 text-xs"
+                      value={chartType}
+                      onChange={e => setChartType(e.target.value as 'line' | 'bar')}
+                      style={{ minWidth: 80 }}
+                    >
+                      <option value="line">Line</option>
+                      <option value="bar">Bar</option>
+                    </select>
+                    {/* Color selectors */}
+                    <label htmlFor="invoice-color" className="font-medium text-xs ml-4">Invoice Color:</label>
+                    <input
+                      id="invoice-color"
+                      type="color"
+                      value={invoiceColor}
+                      onChange={e => setInvoiceColor(e.target.value)}
+                      className="ml-1"
+                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
+                    />
+                    <label htmlFor="purchase-color" className="font-medium text-xs ml-4">Purchase Color:</label>
+                    <input
+                      id="purchase-color"
+                      type="color"
+                      value={purchaseColor}
+                      onChange={e => setPurchaseColor(e.target.value)}
+                      className="ml-1"
+                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {comparisonLoading ? (
+                    <div>Loading graph...</div>
+                  ) : comparisonError ? (
+                    <div className="text-red-600">{comparisonError}</div>
+                  ) : (
+                    <div style={{ width: "100%", height: 130 }}>
+                      <ResponsiveContainer width="100%" height={130}>
+                        {chartType === 'line' ? (
+                          <LineChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <XAxis dataKey="month" tickFormatter={m => {
+                              try {
+                                return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
+                              } catch {
+                                return m;
+                              }
+                            }} />
+                            <YAxis tickFormatter={v => {
+                              if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
+                              if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
+                              if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                              return `₹${v}`;
+                            }} />
+                            <Tooltip formatter={v => {
+                              if (typeof v !== 'number') return v;
+                              if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
+                              if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
+                              if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
+                              return `₹${v}`;
+                            }} labelFormatter={m => {
+                              try {
+                                return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
+                              } catch {
+                                return m;
+                              }
+                            }} />
+                            <Legend />
+                            <Line type="monotone" dataKey="invoice" stroke={invoiceColor} name="Invoice Value" strokeWidth={3} dot={{ r: 4 }} />
+                            <Line type="monotone" dataKey="purchase" stroke={purchaseColor} name="Purchase Value" strokeWidth={3} dot={{ r: 4 }} />
+                          </LineChart>
+                        ) : (
+                          <BarChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <XAxis dataKey="month" tickFormatter={m => {
+                              try {
+                                return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
+                              } catch {
+                                return m;
+                              }
+                            }} />
+                            <YAxis tickFormatter={v => {
+                              if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
+                              if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
+                              if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                              return `₹${v}`;
+                            }} />
+                            <Tooltip formatter={v => {
+                              if (typeof v !== 'number') return v;
+                              if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
+                              if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
+                              if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
+                              return `₹${v}`;
+                            }} labelFormatter={m => {
+                              try {
+                                return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
+                              } catch {
+                                return m;
+                              }
+                            }} />
+                            <Legend />
+                            <Bar dataKey="invoice" fill={invoiceColor} name="Invoice Value" />
+                            <Bar dataKey="purchase" fill={purchaseColor} name="Purchase Value" />
+                          </BarChart>
+                        )}
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Row 3: Taxes Paid Summary */}
+          <Card className="mt-4" style={{ borderBottom: '4px solid #00BCD4' }}>
+            <CardHeader>
+              <CardTitle style={{ color: '#4472C4' }}>Taxes Paid Summary (Month-wise)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-semibold">Select Month:</span>
+                <select value={selectedTaxMonth} onChange={e => setSelectedTaxMonth(e.target.value)} className="border rounded px-2 py-1">
+                  {taxMonths.map(m => <option key={m} value={m}>{monthNames[parseInt(m)]}</option>)}
+                </select>
+                <span className="font-semibold ml-4">Select Year:</span>
+                <select value={selectedTaxYear} onChange={e => setSelectedTaxYear(e.target.value)} className="border rounded px-2 py-1">
+                  {taxYears.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
               </div>
-            </div>
-            </div>
-            {/* Taxes Paid Summary (Month-wise) */}
-            <Card className="mt-4" style={{ borderBottom: '4px solid #00BCD4' }}>
-              <CardHeader>
-                <CardTitle style={{ color: '#4472C4' }}>Taxes Paid Summary (Month-wise)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-semibold">Select Month:</span>
-                  <select value={selectedTaxMonth} onChange={e => setSelectedTaxMonth(e.target.value)} className="border rounded px-2 py-1">
-                    {taxMonths.map(m => <option key={m} value={m}>{monthNames[parseInt(m)]}</option>)}
-                  </select>
-                  <span className="font-semibold ml-4">Select Year:</span>
-                  <select value={selectedTaxYear} onChange={e => setSelectedTaxYear(e.target.value)} className="border rounded px-2 py-1">
-                    {taxYears.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-                <table className="min-w-full border text-sm">
-                  <thead>
-                    <tr style={{ backgroundColor: '#4472C4', color: '#fff' }}>
-                      <th className="border px-2 py-1">Month</th>
-                      <th className="border px-2 py-1">CGST Collected</th>
-                      <th className="border px-2 py-1">SGST Collected</th>
-                      <th className="border px-2 py-1">IGST Collected</th>
-                      <th className="border px-2 py-1">Veshad CGST</th>
-                      <th className="border px-2 py-1">Veshad SGST</th>
-                      <th className="border px-2 py-1">Veshad IGST</th>
-                      <th className="border px-2 py-1">Residual</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      // Find the key for selected month and year (month is 1-based)
-                      // selectedTaxMonth is 0-based string, so key is year-(month+1)
-                      const key = `${selectedTaxYear}-${(parseInt(selectedTaxMonth)+1).toString().padStart(2,'0')}`;
-                      const row = taxData[key];
-                      if (row) {
-                        // Display monthNames[row.month] where row.month is 0-based
-                        return (
-                          <tr>
-                            <td className="border px-2 py-1 font-semibold">{monthNames[row.month]} {row.year}</td>
-                            <td className="border px-2 py-1 text-green-800">₹{row.cgst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-green-800">₹{row.sgst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-green-800">₹{row.igst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-blue-800">₹{row.veshadCgst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-blue-800">₹{row.veshadSgst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-blue-800">₹{row.veshadIgst.toLocaleString("en-IN")}</td>
-                            <td className="border px-2 py-1 text-red-800 font-bold">₹{(row.veshadCgst + row.veshadSgst + row.veshadIgst - row.cgst - row.sgst - row.igst).toLocaleString("en-IN")}</td>
-                          </tr>
-                        );
-                      } else {
-                        return (
-                          <tr>
-                            <td className="border px-2 py-1" colSpan={8}>No data available for this month and year.</td>
-                          </tr>
-                        );
-                      }
-                    })()}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr style={{ backgroundColor: '#4472C4', color: '#fff' }}>
+                    <th className="border px-2 py-1">Month</th>
+                    <th className="border px-2 py-1">CGST Collected</th>
+                    <th className="border px-2 py-1">SGST Collected</th>
+                    <th className="border px-2 py-1">IGST Collected</th>
+                    <th className="border px-2 py-1">Veshad CGST</th>
+                    <th className="border px-2 py-1">Veshad SGST</th>
+                    <th className="border px-2 py-1">Veshad IGST</th>
+                    <th className="border px-2 py-1">Residual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    // Find the key for selected month and year (month is 1-based)
+                    // selectedTaxMonth is 0-based string, so key is year-(month+1)
+                    const key = `${selectedTaxYear}-${(parseInt(selectedTaxMonth)+1).toString().padStart(2,'0')}`;
+                    const row = taxData[key];
+                    if (row) {
+                      // Display monthNames[row.month] where row.month is 0-based
+                      return (
+                        <tr>
+                          <td className="border px-2 py-1 font-semibold">{monthNames[row.month]} {row.year}</td>
+                          <td className="border px-2 py-1 text-green-800">₹{row.cgst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-green-800">₹{row.sgst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-green-800">₹{row.igst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-blue-800">₹{row.veshadCgst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-blue-800">₹{row.veshadSgst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-blue-800">₹{row.veshadIgst.toLocaleString("en-IN")}</td>
+                          <td className="border px-2 py-1 text-red-800 font-bold">₹{(row.veshadCgst + row.veshadSgst + row.veshadIgst - row.cgst - row.sgst - row.igst).toLocaleString("en-IN")}</td>
+                        </tr>
+                      );
+                    } else {
+                      return (
+                        <tr>
+                          <td className="border px-2 py-1" colSpan={8}>No data available for this month and year.</td>
+                        </tr>
+                      );
+                    }
+                  })()}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
         </TabsContent>
+
         <TabsContent value="bank">
           <Card style={{ borderBottom: '4px solid #8BC34A' }}>
             <CardHeader><CardTitle>Bank Balances</CardTitle></CardHeader>
