@@ -555,12 +555,19 @@ app.get("/api/gst-collected", (req, res) => {
 });
 
 app.get("/api/gst-collected-fy", (req, res) => {
-  const now = new Date();
-  let fyStartYear = now.getFullYear();
-  let fyEndYear = now.getFullYear() + 1;
-  if (now.getMonth() + 1 < 4) {
-    fyStartYear = now.getFullYear() - 1;
-    fyEndYear = now.getFullYear();
+  const { fy } = req.query;
+  let fyStartYear, fyEndYear;
+  
+  if (fy && fy.includes('-')) {
+    [fyStartYear, fyEndYear] = fy.split('-').map(Number);
+  } else {
+    const now = new Date();
+    fyStartYear = now.getFullYear();
+    fyEndYear = now.getFullYear() + 1;
+    if (now.getMonth() + 1 < 4) {
+      fyStartYear = now.getFullYear() - 1;
+      fyEndYear = now.getFullYear();
+    }
   }
   const fyStart = `${fyStartYear}-04-01`;
   const fyEnd = `${fyEndYear}-03-31`;
@@ -620,12 +627,19 @@ app.get("/api/vendor/gst-collected", (req, res) => {
 });
 
 app.get("/api/vendor/gst-collected-fy", (req, res) => {
-  const now = new Date();
-  let fyStartYear = now.getFullYear();
-  let fyEndYear = now.getFullYear() + 1;
-  if (now.getMonth() + 1 < 4) {
-    fyStartYear = now.getFullYear() - 1;
-    fyEndYear = now.getFullYear();
+  const { fy } = req.query;
+  let fyStartYear, fyEndYear;
+  
+  if (fy && fy.includes('-')) {
+    [fyStartYear, fyEndYear] = fy.split('-').map(Number);
+  } else {
+    const now = new Date();
+    fyStartYear = now.getFullYear();
+    fyEndYear = now.getFullYear() + 1;
+    if (now.getMonth() + 1 < 4) {
+      fyStartYear = now.getFullYear() - 1;
+      fyEndYear = now.getFullYear();
+    }
   }
   const fyStart = `${fyStartYear}-04-01`;
   const fyEnd = `${fyEndYear}-03-31`;
