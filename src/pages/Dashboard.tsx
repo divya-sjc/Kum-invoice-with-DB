@@ -400,23 +400,7 @@ const Dashboard: React.FC = () => {
           <TabsTrigger value="bank">Bank Balances</TabsTrigger>
         </TabsList>
         <TabsContent value="main">
-          {/* Row 1: FY Dropdown - Full Width */}
-          <div className="flex items-center justify-center gap-3 mb-4 p-2 bg-gray-50 rounded">
-            <span className="font-medium text-base" style={{ color: '#4472C4' }}>Select Financial Year:</span>
-            <select
-              id="fy-select"
-              value={selectedFy}
-              onChange={e => setSelectedFy(e.target.value)}
-              className="border rounded px-3 py-1 text-base"
-              style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
-            >
-              {fyOptions.map(fy => (
-                <option key={fy} value={fy}>{fy}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Row 2: 2-Column Grid */}
+          {/* Row 1: 2-Column Grid - FY dropdown moves to top of right column */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* LEFT COLUMN: Pending Invoices + FY Invoice Status (stacked vertically) */}
             <div className="flex flex-col gap-4">
@@ -483,10 +467,23 @@ const Dashboard: React.FC = () => {
 
             {/* RIGHT COLUMN: GST Cards + Chart (stacked vertically) */}
             <div className="flex flex-col gap-4">
-              {/* GST Collected Till Date */}
+              {/* FY Dropdown + GST Collected Till Date */}
               <Card style={{ borderBottom: '4px solid #4CAF50' }}>
                 <CardHeader>
-                  <CardTitle style={{ color: '#4472C4' }}>GST Collected Till Date ({selectedFy})</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle style={{ color: '#4472C4' }}>GST Collected Till Date ({selectedFy})</CardTitle>
+                    <select
+                      id="fy-select"
+                      value={selectedFy}
+                      onChange={e => setSelectedFy(e.target.value)}
+                      className="border rounded px-2 py-1 text-xs"
+                      style={{ backgroundColor: 'white', border: '1px solid #4472C4', color: '#4472C4' }}
+                    >
+                      {fyOptions.map(fy => (
+                        <option key={fy} value={fy}>{fy}</option>
+                      ))}
+                    </select>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2">
@@ -515,137 +512,135 @@ const Dashboard: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Purchase vs Invoice Chart */}
-              <Card style={{ borderBottom: '4px solid #E91E63' }}>
-                <CardHeader>
-                  <CardTitle style={{ color: '#4472C4' }}>Purchases vs Invoice Values (Year-Wise)</CardTitle>
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    <label htmlFor="comparison-year" className="font-medium text-xs">Year:</label>
-                    <select
-                      id="comparison-year"
-                      className="border rounded px-2 py-1 text-xs"
-                      value={comparisonYear}
-                      onChange={e => setComparisonYear(e.target.value)}
-                      style={{ minWidth: 80 }}
-                    >
-                      {availableYears.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    {/* Chart type selector */}
-                    <label htmlFor="chart-type" className="font-medium text-xs ml-4">Chart Type:</label>
-                    <select
-                      id="chart-type"
-                      className="border rounded px-2 py-1 text-xs"
-                      value={chartType}
-                      onChange={e => setChartType(e.target.value as 'line' | 'bar')}
-                      style={{ minWidth: 80 }}
-                    >
-                      <option value="line">Line</option>
-                      <option value="bar">Bar</option>
-                    </select>
-                    {/* Color selectors */}
-                    <label htmlFor="invoice-color" className="font-medium text-xs ml-4">Invoice Color:</label>
-                    <input
-                      id="invoice-color"
-                      type="color"
-                      value={invoiceColor}
-                      onChange={e => setInvoiceColor(e.target.value)}
-                      className="ml-1"
-                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                    />
-                    <label htmlFor="purchase-color" className="font-medium text-xs ml-4">Purchase Color:</label>
-                    <input
-                      id="purchase-color"
-                      type="color"
-                      value={purchaseColor}
-                      onChange={e => setPurchaseColor(e.target.value)}
-                      className="ml-1"
-                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {comparisonLoading ? (
-                    <div>Loading graph...</div>
-                  ) : comparisonError ? (
-                    <div className="text-red-600">{comparisonError}</div>
-                  ) : (
-                    <div style={{ width: "100%", height: 130 }}>
-                      <ResponsiveContainer width="100%" height={130}>
-                        {chartType === 'line' ? (
-                          <LineChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <XAxis dataKey="month" tickFormatter={m => {
-                              try {
-                                return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
-                              } catch {
-                                return m;
-                              }
-                            }} />
-                            <YAxis tickFormatter={v => {
-                              if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
-                              if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
-                              if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
-                              return `₹${v}`;
-                            }} />
-                            <Tooltip formatter={v => {
-                              if (typeof v !== 'number') return v;
-                              if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
-                              if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
-                              if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
-                              return `₹${v}`;
-                            }} labelFormatter={m => {
-                              try {
-                                return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
-                              } catch {
-                                return m;
-                              }
-                            }} />
-                            <Legend />
-                            <Line type="monotone" dataKey="invoice" stroke={invoiceColor} name="Invoice Value" strokeWidth={3} dot={{ r: 4 }} />
-                            <Line type="monotone" dataKey="purchase" stroke={purchaseColor} name="Purchase Value" strokeWidth={3} dot={{ r: 4 }} />
-                          </LineChart>
-                        ) : (
-                          <BarChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <XAxis dataKey="month" tickFormatter={m => {
-                              try {
-                                return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
-                              } catch {
-                                return m;
-                              }
-                            }} />
-                            <YAxis tickFormatter={v => {
-                              if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
-                              if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
-                              if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
-                              return `₹${v}`;
-                            }} />
-                            <Tooltip formatter={v => {
-                              if (typeof v !== 'number') return v;
-                              if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
-                              if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
-                              if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
-                              return `₹${v}`;
-                            }} labelFormatter={m => {
-                              try {
-                                return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
-                              } catch {
-                                return m;
-                              }
-                            }} />
-                            <Legend />
-                            <Bar dataKey="invoice" fill={invoiceColor} name="Invoice Value" />
-                            <Bar dataKey="purchase" fill={purchaseColor} name="Purchase Value" />
-                          </BarChart>
-                        )}
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
+
+          {/* Purchase vs Invoice Chart - Full Width */}
+          <Card className="mt-4" style={{ borderBottom: '4px solid #E91E63' }}>
+            <CardHeader>
+              <CardTitle style={{ color: '#4472C4' }}>Purchases vs Invoice Values (Year-Wise)</CardTitle>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <label htmlFor="comparison-year" className="font-medium text-xs">Year:</label>
+                <select
+                  id="comparison-year"
+                  className="border rounded px-2 py-1 text-xs"
+                  value={comparisonYear}
+                  onChange={e => setComparisonYear(e.target.value)}
+                  style={{ minWidth: 80 }}
+                >
+                  {availableYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <label htmlFor="chart-type" className="font-medium text-xs ml-4">Chart Type:</label>
+                <select
+                  id="chart-type"
+                  className="border rounded px-2 py-1 text-xs"
+                  value={chartType}
+                  onChange={e => setChartType(e.target.value as 'line' | 'bar')}
+                  style={{ minWidth: 80 }}
+                >
+                  <option value="line">Line</option>
+                  <option value="bar">Bar</option>
+                </select>
+                <label htmlFor="invoice-color" className="font-medium text-xs ml-4">Invoice Color:</label>
+                <input
+                  id="invoice-color"
+                  type="color"
+                  value={invoiceColor}
+                  onChange={e => setInvoiceColor(e.target.value)}
+                  className="ml-1"
+                  style={{ width: 32, height: 32, border: 'none', background: 'none' }}
+                />
+                <label htmlFor="purchase-color" className="font-medium text-xs ml-4">Purchase Color:</label>
+                <input
+                  id="purchase-color"
+                  type="color"
+                  value={purchaseColor}
+                  onChange={e => setPurchaseColor(e.target.value)}
+                  className="ml-1"
+                  style={{ width: 32, height: 32, border: 'none', background: 'none' }}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {comparisonLoading ? (
+                <div>Loading graph...</div>
+              ) : comparisonError ? (
+                <div className="text-red-600">{comparisonError}</div>
+              ) : (
+                <div style={{ width: "100%", height: 130 }}>
+                  <ResponsiveContainer width="100%" height={130}>
+                    {chartType === 'line' ? (
+                      <LineChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <XAxis dataKey="month" tickFormatter={m => {
+                          try {
+                            return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
+                          } catch {
+                            return m;
+                          }
+                        }} />
+                        <YAxis tickFormatter={v => {
+                          if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
+                          if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
+                          if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                          return `₹${v}`;
+                        }} />
+                        <Tooltip formatter={v => {
+                          if (typeof v !== 'number') return v;
+                          if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
+                          if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
+                          if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
+                          return `₹${v}`;
+                        }} labelFormatter={m => {
+                          try {
+                            return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
+                          } catch {
+                            return m;
+                          }
+                        }} />
+                        <Legend />
+                        <Line type="monotone" dataKey="invoice" stroke={invoiceColor} name="Invoice Value" strokeWidth={3} dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="purchase" stroke={purchaseColor} name="Purchase Value" strokeWidth={3} dot={{ r: 4 }} />
+                      </LineChart>
+                    ) : (
+                      <BarChart data={monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <XAxis dataKey="month" tickFormatter={m => {
+                          try {
+                            return new Date(m + "-01").toLocaleString('default', { month: 'short', year: '2-digit' });
+                          } catch {
+                            return m;
+                          }
+                        }} />
+                        <YAxis tickFormatter={v => {
+                          if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
+                          if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
+                          if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+                          return `₹${v}`;
+                        }} />
+                        <Tooltip formatter={v => {
+                          if (typeof v !== 'number') return v;
+                          if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
+                          if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
+                          if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
+                          return `₹${v}`;
+                        }} labelFormatter={m => {
+                          try {
+                            return new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
+                          } catch {
+                            return m;
+                          }
+                        }} />
+                        <Legend />
+                        <Bar dataKey="invoice" fill={invoiceColor} name="Invoice Value" />
+                        <Bar dataKey="purchase" fill={purchaseColor} name="Purchase Value" />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Row 3: Taxes Paid Summary */}
           <Card className="mt-4" style={{ borderBottom: '4px solid #00BCD4' }}>
