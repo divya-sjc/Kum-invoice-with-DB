@@ -512,58 +512,6 @@ const Dashboard: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Purchase vs Invoice Chart */}
-              <Card style={{ borderBottom: '4px solid #E91E63' }}>
-                <CardHeader>
-                  <CardTitle style={{ color: '#4472C4' }}>Purchases vs Invoice Values (Year-Wise)</CardTitle>
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    <label htmlFor="comparison-year" className="font-medium text-xs">Year:</label>
-                    <select
-                      id="comparison-year"
-                      className="border rounded px-2 py-1 text-xs"
-                      value={comparisonYear}
-                      onChange={e => setComparisonYear(e.target.value)}
-                      style={{ minWidth: 80 }}
-                    >
-                      {availableYears.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    {/* Chart type selector */}
-                    <label htmlFor="chart-type" className="font-medium text-xs ml-4">Chart Type:</label>
-                    <select
-                      id="chart-type"
-                      className="border rounded px-2 py-1 text-xs"
-                      value={chartType}
-                      onChange={e => setChartType(e.target.value as 'line' | 'bar')}
-                      style={{ minWidth: 80 }}
-                    >
-                      <option value="line">Line</option>
-                      <option value="bar">Bar</option>
-                    </select>
-                    {/* Color selectors */}
-                    <label htmlFor="invoice-color" className="font-medium text-xs ml-4">Invoice Color:</label>
-                    <input
-                      id="invoice-color"
-                      type="color"
-                      value={invoiceColor}
-                      onChange={e => setInvoiceColor(e.target.value)}
-                      className="ml-1"
-                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                    />
-                    <label htmlFor="purchase-color" className="font-medium text-xs ml-4">Purchase Color:</label>
-                    <input
-                      id="purchase-color"
-                      type="color"
-                      value={purchaseColor}
-                      onChange={e => setPurchaseColor(e.target.value)}
-                      className="ml-1"
-                      style={{ width: 32, height: 32, border: 'none', background: 'none' }}
-                    />
-                  </div>
-                </CardHeader>
-              </Card>
             </div>
           </div>
 
