@@ -922,7 +922,164 @@ app.delete("/api/delivery-challans/:challanNo", (req, res) => {
         message: 'Delivery challan and its items deleted successfully',
         challanNo
       });
+});
     });
+});
+
+// Get next delivery challan number with FY (DC-0001/26-27 format)
+app.get("/api/delivery-challans/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT challanNo FROM delivery_challans WHERE challanNo LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`DC-/%/${fyString}`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1;
+      if (row && row.challanNo) {
+        const match = row.challanNo.match(/DC-([0-9]{4})\/\d{2}-\d{2}/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const challanNo = `DC-${nextNumber.toString().padStart(4, '0')}/${fyString}`;
+      res.json({ challanNo });
+    }
+  );
+});
+
+// Create quotes table if not exists
+db.run(`CREATE TABLE IF NOT EXISTS quotes (
+  quotesNumber TEXT PRIMARY KEY,
+  date TEXT,
+  deliveryDate TEXT,
+  supplierName TEXT,
+  clientAddress_name TEXT,
+  clientAddress_address TEXT,
+  requestedBy TEXT,
+  grandTotal REAL,
+  notes TEXT,
+  items TEXT
+)`);
+
+// Get next quote number with FY (QTE/26-27/0001 format)
+app.get("/api/quotes/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT quotesNumber FROM quotes WHERE quotesNumber LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`QTE/${fyString}/%`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1001;
+      if (row && row.quotesNumber) {
+        const match = row.quotesNumber.match(/QTE\/\d{2}-\d{2}\/([0-9]{4})/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const quotesNumber = `QTE/${fyString}/${nextNumber.toString().padStart(4, '0')}`;
+      res.json({ quotesNumber });
+    }
+  );
+});
+
+// Get all quotes
+app.get("/api/quotes", (req, res) => {
+  db.all("SELECT * FROM quotes ORDER BY quotesNumber DESC", [], (err, rows) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Get a single quote
+app.get("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  db.get("SELECT * FROM quotes WHERE quotesNumber = ?", [quotesNumber], (err, row) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+    res.json(row);
+  });
+});
+
+// Create new quote
+app.post("/api/quotes", (req, res) => {
+  const { quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items } = req.body;
+  
+  if (!quotesNumber || !date) {
+    return res.status(400).json({ error: "Quote number and date are required" });
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO quotes (quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, JSON.stringify(items), (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, quotesNumber });
+  });
+});
+
+// Update quote
+app.put("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  const { date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items } = req.body;
+  
+  const stmt = db.prepare(`
+    UPDATE quotes SET date=?, deliveryDate=?, supplierName=?, clientAddress_name=?, clientAddress_address=?, requestedBy=?, grandTotal=?, notes=?, items=?
+    WHERE quotesNumber = ?
+  `);
+  
+  stmt.run(date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, JSON.stringify(items), quotesNumber, (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Delete quote
+app.delete("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  db.run("DELETE FROM quotes WHERE quotesNumber = ?", [quotesNumber], (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true });
   });
 });
 
@@ -954,6 +1111,38 @@ app.get("/api/purchases/max-slno", (req, res) => {
     }
     res.json({ maxSlNo: row?.maxSlNo || 0 });
   });
+});
+
+// Get next purchase number with FY
+app.get("/api/purchases/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT purchaseNo FROM purchases WHERE purchaseNo LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`PUR/${fyString}/%`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1001;
+      if (row && row.purchaseNo) {
+        const match = row.purchaseNo.match(/PUR\/\d{2}-\d{2}\/([0-9]{4})/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const purchaseNo = `PUR/${fyString}/${nextNumber.toString().padStart(4, '0')}`;
+      res.json({ purchaseNo });
+    }
+  );
 });
 
 

@@ -329,12 +329,12 @@ const months = Array.from(
 
  async function handleAddNew() {
   try {
-    const res = await fetch("http://localhost:4000/api/purchases/max-slno");
+    const res = await fetch("http://localhost:4000/api/purchases/next-number");
     const data = await res.json();
-    const nextSlNo = (data.maxSlNo || 0) + 1;
+    const nextPurchaseNo = data.purchaseNo;
 
     setEditData({
-      slNo: String(nextSlNo), // auto-filled
+      slNo: nextPurchaseNo, // auto-filled with FY-based number
       date: "",
       description: "",
       credit: null,

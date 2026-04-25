@@ -33,44 +33,21 @@ const initialQuotes = {
   ],
 };
 
-// Utility to get next purchase order number
+// Utility to get next quotes number
 async function getNextQuotesNumber() {
   try {
-    const response = await fetch("/api/quotes");
-    if (!response.ok) throw new Error("Failed to fetch quotes");
-    const orders = await response.json();
-    let maxNum = 0;
-    let challanYear = "";
-    orders.forEach(order => {
-      if (order.quotesNumber) {
-        // Extract the number part from "PUR/0001/25-26"
-        const match = order.quotesNumber.match(/^QI\/(\d{4})\/(\d{2}-\d{2})$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxNum) {
-            maxNum = num;
-            challanYear = match[2];
-          }
-        }
-      }
-    });
-    // If no orders exist, start from 1 and use current year
-    if (!challanYear) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const startYear = year % 100;
-      const endYear = (year + 1) % 100;
-      challanYear = `${startYear.toString().padStart(2, "0")}-${endYear.toString().padStart(2, "0")}`;
-    }
-    const nextNum = (maxNum + 1).toString().padStart(4, "0");
-    return `QI/${nextNum}/${challanYear}`;
+    const response = await fetch("http://localhost:4000/api/quotes/next-number");
+    if (!response.ok) throw new Error("Failed to fetch next number");
+    const data = await response.json();
+    return data.quotesNumber;
   } catch (err) {
+    // fallback
     const now = new Date();
     const year = now.getFullYear();
     const startYear = year % 100;
     const endYear = (year + 1) % 100;
-    const challanYear = `${startYear.toString().padStart(2, "0")}-${endYear.toString().padStart(2, "0")}`;
-    return `QI/0001/${challanYear}`;
+    const fy = `${startYear.toString().padStart(2, "0")}-${endYear.toString().padStart(2, "0")}`;
+    return `QTE/${fy}/0001`;
   }
 }
 

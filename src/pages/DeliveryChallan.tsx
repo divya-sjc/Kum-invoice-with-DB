@@ -22,38 +22,18 @@ function extractChallanNumber(challanNo: string): number {
 
 async function getNextChallanNumber(): Promise<string> {
   try {
-    const response = await fetch("http://localhost:4000/api/delivery-challans");
-    if (!response.ok) throw new Error("Failed to fetch delivery challans");
-    const dcs = await response.json();
-    let maxNum = 0;
-    let challanYear = "";
-    dcs.forEach(dc => {
-      if (dc.challanNo) {
-        const num = extractChallanNumber(`${dc.challanNo}`);
-        if (num > maxNum) {
-          maxNum = num;
-          challanYear = dc.challanYear;
-        }
-      }
-    });
-    // If no DCs exist, start from 1 and use current year
-    if (!challanYear) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const startYear = year % 100;
-      const endYear = (year + 1) % 100;
-      challanYear = `${startYear.toString().padStart(2, "0")}-${endYear.toString().padStart(2, "0")}`;
-    }
-    const nextNum = (maxNum + 1).toString().padStart(3, "0");
-    return `DC-${nextNum}/${challanYear}`;
+    const response = await fetch("http://localhost:4000/api/delivery-challans/next-number");
+    if (!response.ok) throw new Error("Failed to fetch next number");
+    const data = await response.json();
+    return data.challanNo;
   } catch (err) {
-    // fallback to DC-001/currentYear
+    // fallback
     const now = new Date();
     const year = now.getFullYear();
     const startYear = year % 100;
     const endYear = (year + 1) % 100;
     const challanYear = `${startYear.toString().padStart(2, "0")}-${endYear.toString().padStart(2, "0")}`;
-    return `DC-001/${challanYear}`;
+    return `DC-0001/${challanYear}`;
   }
 }
 
