@@ -1087,7 +1087,8 @@ app.delete("/api/quotes/:quotesNumber", (req, res) => {
 // Helper Functions
 const validatePurchaseData = (data) => {
   const errors = [];
-  if (!data.slNo) errors.push('Serial number is required');
+  // Either slNo or purchaseNo is required
+  if (!data.slNo && !data.purchaseNo) errors.push('Serial number is required');
   if (!data.date) errors.push('Date is required');
   if (!data.description) errors.push('Description is required');
   
@@ -1239,15 +1240,15 @@ app.post("/api/purchases", (req, res) => {
     return res.status(400).json({ 
       error: 'Validation failed', 
       details: validationErrors.join(', ') 
-    });pi
+    });
   }
 
   const query = `
     INSERT INTO purchases (
       slNo, date, description, credit, debit,
       bankPaymentRef, clientName, paymentRemarks,
-      refBankName, invoiceNo, inputCgst, inputSgst, inputIgst
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      refBankName, invoiceNo, inputCgst, inputSgst, inputIgst, purchaseNo
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.run(
@@ -1265,7 +1266,8 @@ app.post("/api/purchases", (req, res) => {
       purchaseData.invoiceNo || '',
       purchaseData.inputCgst || 0,
       purchaseData.inputSgst || 0,
-      purchaseData.inputIgst || 0
+      purchaseData.inputIgst || 0,
+      purchaseData.slNo // use slNo as purchaseNo for new format
     ],
     function(err) {
       if (err) {
