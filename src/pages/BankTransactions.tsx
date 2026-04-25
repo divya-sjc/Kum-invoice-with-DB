@@ -91,7 +91,23 @@ export default function BankTransactions() {
     debit,
     balance: credit - debit,
   }))
-  .sort((a, b) => a.invoice.toLowerCase().localeCompare(b.invoice.toLowerCase()));
+  .sort((a, b) => {
+    const aIsVes = a.invoice.startsWith('VES/');
+    const bIsVes = b.invoice.startsWith('VES/');
+    if (aIsVes && bIsVes) {
+      // Both VES/, sort descending
+      return b.invoice.localeCompare(a.invoice);
+    } else if (aIsVes) {
+      // a is VES/, b is not
+      return -1;
+    } else if (bIsVes) {
+      // b is VES/, a is not
+      return 1;
+    } else {
+      // Neither VES/, sort ascending
+      return a.invoice.localeCompare(b.invoice);
+    }
+  });
 
   // Calculate totals for balances
   const totalInvoiceBalance = invoiceRows.reduce((sum, row) => sum + row.balance, 0);
@@ -108,11 +124,11 @@ export default function BankTransactions() {
           <div className="rounded-md border overflow-x-auto">
             <Table className="text-xs">
               <TableHeader>
-                <TableRow>
-                  <TableHead className="px-2 py-1">Bank Name</TableHead>
-                  <TableHead className="text-right px-2 py-1">Total Credit</TableHead>
-                  <TableHead className="text-right px-2 py-1">Total Debit</TableHead>
-                  <TableHead className="text-right px-2 py-1">Balance</TableHead>
+                <TableRow style={{ position: 'sticky', top: 0, zIndex: 10, background: '#4472C4' }}>
+                  <TableHead className="px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Bank Name</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Total Credit</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Total Debit</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Balance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -147,10 +163,10 @@ export default function BankTransactions() {
             <Table className="text-xs">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-2 py-1">Invoice Number</TableHead>
-                  <TableHead className="text-right px-2 py-1">Total Credit</TableHead>
-                  <TableHead className="text-right px-2 py-1">Total Debit</TableHead>
-                  <TableHead className="text-right px-2 py-1">Balance</TableHead>
+                  <TableHead className="px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Invoice Number</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Total Credit</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Total Debit</TableHead>
+                  <TableHead className="text-right px-2 py-1" style={{ background: '#4472C4', color: 'white', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif', fontWeight: 600 }}>Balance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

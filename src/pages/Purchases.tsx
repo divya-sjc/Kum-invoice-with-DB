@@ -329,12 +329,12 @@ const months = Array.from(
 
  async function handleAddNew() {
   try {
-    const res = await fetch("http://localhost:4000/api/purchases/max-slno");
+    const res = await fetch("http://localhost:4000/api/purchases/next-number");
     const data = await res.json();
-    const nextSlNo = (data.maxSlNo || 0) + 1;
+    const nextPurchaseNo = data.purchaseNo;
 
     setEditData({
-      slNo: String(nextSlNo), // auto-filled
+      slNo: nextPurchaseNo, // auto-filled with FY-based number
       date: "",
       description: "",
       credit: null,
@@ -770,7 +770,7 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
 
      {/* Edit/Add Modal */}
      <Dialog open={!!editData || isAdding} onOpenChange={(open) => { if (!open) { setEditData(null); setEditingId(null); setIsAdding(false); } }}>
-        <DialogContent className="max-w-xs p-4">
+  <DialogContent className="max-w-xl p-6">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Purchase' : 'Add Purchase'}</DialogTitle>
           </DialogHeader>
@@ -795,10 +795,10 @@ const scrollbarWidth = 16; // px, adjust if needed for your OS/browser
                   <Textarea className="min-h-[40px] text-xs" value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} />
                 </label>
                 <label className="text-xs flex flex-col">Credit
-                  <Input className="h-7 text-xs" type="number" value={editData.credit ?? ''} onChange={e => setEditData({ ...editData, credit: e.target.value === '' ? null : Number(e.target.value) })} />
+                  <Input className="h-7 text-xs font-bold text-green-700" type="number" value={editData.credit ?? ''} onChange={e => setEditData({ ...editData, credit: e.target.value === '' ? null : Number(e.target.value) })} />
                 </label>
                 <label className="text-xs flex flex-col">Debit
-                  <Input className="h-7 text-xs" type="number" value={editData.debit ?? ''} onChange={e => setEditData({ ...editData, debit: e.target.value === '' ? null : Number(e.target.value) })} />
+                  <Input className="h-7 text-xs font-bold text-red-700" type="number" value={editData.debit ?? ''} onChange={e => setEditData({ ...editData, debit: e.target.value === '' ? null : Number(e.target.value) })} />
                 </label>
                 <label className="text-xs flex flex-col">Bank Payment Ref
                   <Input className="h-7 text-xs" value={editData.bankPaymentRef} onChange={e => setEditData({ ...editData, bankPaymentRef: e.target.value })} />

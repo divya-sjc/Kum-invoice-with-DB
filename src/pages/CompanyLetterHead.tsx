@@ -178,13 +178,13 @@ export default function CompanyLetterHead() {
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #888' }} border={1}>
           <thead>
-            <tr style={{ background: '#f0f0f0' }}>
-              <th style={{ border: '1px solid #888' }}><input type="checkbox" onChange={handleSelectAll} checked={selectedLetterIds.length === letters.length && letters.length > 0} /></th>
-              <th style={{ border: '1px solid #888' }}>Date</th>
-              <th style={{ border: '1px solid #888' }}>To</th>
-              <th style={{ border: '1px solid #888' }}>Subject</th>
-              <th style={{ border: '1px solid #888' }}>Body</th>
-              <th style={{ border: '1px solid #888' }}>Preview</th>
+            <tr style={{ background: '#4472C4' }}>
+              <th style={{ border: '1px solid #888', color: 'white' }}><input type="checkbox" onChange={handleSelectAll} checked={selectedLetterIds.length === letters.length && letters.length > 0} /></th>
+              <th style={{ border: '1px solid #888', color: 'white' }}>Date</th>
+              <th style={{ border: '1px solid #888', color: 'white' }}>To</th>
+              <th style={{ border: '1px solid #888', color: 'white' }}>Subject</th>
+              <th style={{ border: '1px solid #888', color: 'white' }}>Body</th>
+              <th style={{ border: '1px solid #888', color: 'white' }}>Preview</th>
             </tr>
           </thead>
           <tbody>
@@ -208,12 +208,12 @@ export default function CompanyLetterHead() {
     const handleDownloadPDF = async () => {
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 40;
       let y = 40;
       // Add watermark (centered, faded)
       const watermarkImg = '/lovable-uploads/watermark.jpeg';
       const logoImg = '/lovable-uploads/7c42979b-5f85-450e-bf3a-6a13d572a552.png';
-      // Load images as base64
       const getBase64FromUrl = async (url) => {
         const data = await fetch(url);
         const blob = await data.blob();
@@ -223,65 +223,59 @@ export default function CompanyLetterHead() {
           reader.onloadend = () => resolve(reader.result);
         });
       };
-      // Logo (top left)
       const logoBase64 = await getBase64FromUrl(logoImg) as string;
       doc.addImage(logoBase64, 'PNG', margin, y, 60, 60);
-      // Watermark (center, faded)
       const watermarkBase64 = await getBase64FromUrl(watermarkImg) as string;
       doc.addImage(watermarkBase64, 'JPEG', pageWidth/2-120, 250, 240, 240, undefined, 'NONE', 0.03);
-      // Heading text
       doc.setFont('Times', 'bold');
-      doc.setFontSize(18);
+      doc.setFontSize(16);
       doc.setTextColor('#2366a8');
       doc.text('VESHAD AND COMPANY', margin+70, y+20);
       doc.setFont('Times', 'normal');
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setTextColor('#2366a8');
       doc.text('# 2876, 1st MAIN KODIHALLI, HAL 2ND STAGE, BANGALORE - 560008, KARNATAKA, INDIA', margin+70, y+38)
       doc.text('Landline:- (91) - 80 - 35550915,  Mobile :- 8317368522 / 9611355110', margin+70, y+48);
       doc.text('Email:- admin@veshad.com / veshad.blr@gmail.com', margin+70, y+58);
-      // Blue line
       doc.setDrawColor('#2366a8');
       doc.setLineWidth(2);
       doc.line(margin, y+70, pageWidth-margin, y+70);
-      y += 130;
+      y += 120;
       doc.setTextColor('#000');
       doc.setFont('Times', 'normal');
-      doc.setFontSize(12);
-      // Date
+      doc.setFontSize(11);
       doc.text(`Date: ${letter.date}`, margin, y);
-      y += 20;
-      // To
+      y += 18;
       doc.text('To:', margin, y);
-      y += 15;
+      y += 13;
       const toLines = doc.splitTextToSize(letter.to || '', pageWidth - margin*2 - 20);
       doc.text(toLines, margin+20, y);
-      y += toLines.length * 15 + 10;
-      // From
+      y += toLines.length * 12 + 8;
       doc.text('From:', margin, y);
-      y += 15;
+      y += 13;
       const fromLines = doc.splitTextToSize(draftTemplate2, pageWidth - margin*2 - 20);
       doc.text(fromLines, margin+20, y);
-      y += fromLines.length * 10 + 10;
-      // draftTemplate3
+      y += fromLines.length * 9 + 8;
       const draft3Lines = doc.splitTextToSize(draftTemplate3, pageWidth - margin*2);
       doc.text(draft3Lines, margin, y);
-      y += draft3Lines.length * 15 + 5;
-      // Subject
+      y += draft3Lines.length * 12 + 4;
       doc.setFont('Times', 'bold');
       doc.text('Subject:', margin+20, y);
       doc.setFont('Times', 'normal');
       doc.text(letter.subject, margin+70, y);
-      y += 20;
-      // Body
+      y += 16;
+      // Body - fit all lines on one page
       const bodyLines = doc.splitTextToSize(letter.body || '', pageWidth - margin*2);
+      let bodyLineHeight = 13;
+      // If content is too long, reduce font size and line height
+      if (y + bodyLines.length * bodyLineHeight > pageHeight - margin) {
+        doc.setFontSize(9);
+        bodyLineHeight = 10;
+      }
       for (let i = 0; i < bodyLines.length; i++) {
+        if (y > pageHeight - margin) break; // Stop if out of space
         doc.text(bodyLines[i], margin, y);
-        y += 16;
-        if (i < bodyLines.length - 1 && y > 780) { doc.addPage(); y = 40;
-          // Add watermark to new page as well
-          doc.addImage(watermarkBase64, 'JPEG', pageWidth/2-120, 250, 240, 240, undefined, 'NONE', 0.03);
-        }
+        y += bodyLineHeight;
       }
       doc.save(`Veshad_Letter_${letter.date}.pdf`);
     };

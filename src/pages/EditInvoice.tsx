@@ -138,7 +138,7 @@ const EditInvoice = () => {
         <h1 className="text-3xl font-bold text-gray-900">Edit Invoice</h1>
       </div>
       {/* <InvoiceForm invoice={currentInvoice} onSave={handleUpdateInvoice} /> */}
-      <InvoiceForm invoice={currentInvoice} vendorName={vendorName} onSave={handleUpdateInvoice} />
+  <InvoiceForm invoice={currentInvoice} vendorName={vendorName} onSave={handleUpdateInvoice} />
     </div>
   );
 };

@@ -130,14 +130,14 @@ export default function VendorsItems() {
       ) : (
         <table className="min-w-full border border-black text-sm">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black px-2 py-1">Item Name</th>
-              <th className="border border-black px-2 py-1">Price/Unit</th>
-              <th className="border border-black px-2 py-1">Quantity</th>
-              <th className="border border-black px-2 py-1">Total</th>
-              <th className="border border-black px-2 py-1">Vendor ID</th>
-              <th className="border border-black px-2 py-1">Invoice ID</th>
-              <th className="border border-black px-2 py-1">Actions</th>
+            <tr className="bg-[#4472C4]">
+              <th className="border border-black px-2 py-1 text-white">Item Name</th>
+              <th className="border border-black px-2 py-1 text-white">Price/Unit</th>
+              <th className="border border-black px-2 py-1 text-white">Quantity</th>
+              <th className="border border-black px-2 py-1 text-white">Total</th>
+              <th className="border border-black px-2 py-1 text-white">Vendor ID</th>
+              <th className="border border-black px-2 py-1 text-white">Invoice ID</th>
+              <th className="border border-black px-2 py-1 text-white">Actions</th>
             </tr>
           </thead>
           <tbody>

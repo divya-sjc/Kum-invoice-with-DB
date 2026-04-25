@@ -71,6 +71,15 @@ interface Invoice {
 
 const InvoiceList = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  // Chart customization modal state
+  const [chartModalOpen, setChartModalOpen] = useState(false);
+  const [chartOptions, setChartOptions] = useState({
+    strokeColor: '#2563eb',
+    strokeWidth: 3,
+    dotRadius: 5,
+    height: 200,
+    widthPercent: 50,
+  });
   const { toast } = useToast(); // Use toast as a function
   const [originalInvoices, setOriginalInvoices] = useState<Invoice[]>([]);
   // New state for month selection and GST
@@ -334,7 +343,7 @@ const InvoiceList = () => {
               Total Invoiced: ₹{invoices.reduce((sum, inv) => sum + ((inv.grandTotal ?? 0) || 0), 0).toLocaleString('en-IN')}
             </div>
             <div className="text-sm font-medium text-green-800">
-              Total Received: ₹{invoices.reduce((sum, inv) => sum + ((inv.paymentReceived ?? 0) || 0), 0).toLocaleString('en-IN')}
+              Total Received: ₹{invoices.reduce((sum, inv) => sum + (inv.paymentStatus === 'Paid' ? (inv.paymentReceived ?? 0) : 0), 0).toLocaleString('en-IN')}
             </div>
           </div>
         </div>
@@ -444,20 +453,29 @@ const InvoiceList = () => {
                 </div>
               </div>
               {/* Row 2: Payment info block, compact */}
-              <div className="flex flex-wrap items-center justify-between gap-2 w-full mt-1 bg-blue-50 rounded border border-blue-100 p-1">
-                <span className="text-xs text-gray-500">Bank: <span className="font-medium text-gray-700">{invoice.paymentBank || '-'}</span></span>
+              {/* Payment info block with updated background color */}
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 w-full mt-1 rounded border border-blue-100 p-1"
+                style={{ backgroundColor: (invoice.paymentStatus === 'Paid' ? '#FFFFCC' : '#4472C4') }}
+              >
+                <span className="text-xs" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>Bank: <span className="font-medium" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>{invoice.paymentBank || '-'}</span></span>
                 <span className="text-xs text-gray-500">Ref ID: <span
-                  className="font-medium text-gray-700 inline-block max-w-[120px] truncate align-middle cursor-pointer"
+                  className="font-medium inline-block max-w-[120px] truncate align-middle cursor-pointer"
+                  style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}
                   title={invoice.paymentBankRef || '-'}
                 >{invoice.paymentBankRef || '-'}</span></span>
-                <span className="text-xs text-gray-500">Status: {(invoice.grandTotal - (invoice.paymentReceived ?? 0)) !== 0 ? (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700">Pending</span>) : (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-700">Paid Fully</span>)}</span>
-                <span className="text-xs text-gray-500">Received: <span className="font-medium text-gray-700">₹{(invoice.paymentReceived ?? 0).toLocaleString('en-IN')}</span></span>
-                <span className="text-xs text-gray-500">Due: <span className="font-medium text-gray-700">₹{((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)).toLocaleString('en-IN')}</span></span>
-                <span className="text-xs text-gray-500">Profit: <span className="font-medium text-gray-700">₹{(invoice.profitPercent ?? 0).toLocaleString('en-IN')}</span></span>
-                <span className="text-xs text-gray-500">Payment Recvd Date: <span className="font-medium text-gray-700">{invoice.paymentDate ? format(new Date(invoice.paymentDate), 'dd-MMM-yyyy') : '-'}</span></span>
+                <span className="text-xs" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>Status: {(invoice.grandTotal - (invoice.paymentReceived ?? 0)) !== 0 ? (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700">Pending</span>) : (<span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-700">Paid Fully</span>)}</span>
+                <span className="text-xs" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>Received: <span className="font-medium" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>₹{(invoice.paymentReceived ?? 0).toLocaleString('en-IN')}</span></span>
+                <span className="text-xs" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>Due: <span className="font-medium" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff', fontWeight: ((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)) > 0 ? 'bold' : undefined }}>₹{((invoice.grandTotal ?? 0) - (invoice.paymentReceived ?? 0)).toLocaleString('en-IN')}</span></span>
+                {/* <span className="text-xs text-gray-500">Profit: <span className="font-medium text-gray-700">₹{(invoice.profitPercent ?? 0).toLocaleString('en-IN')}</span></span> */}
+                <span className="text-xs" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>Payment Recvd Date: <span className="font-medium" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>{invoice.paymentDate ? format(new Date(invoice.paymentDate), 'dd-MMM-yyyy') : '-'}</span></span>
                 {invoice.notes && (
-                  <span className="text-xs text-blue-700 font-semibold">Misc Notes: <span className="font-normal text-gray-700">{invoice.notes}</span></span>
+                  <span className="text-xs font-semibold" style={{ color: invoice.paymentStatus === 'Paid' ? '#2563eb' : '#fff' }}>Misc Notes: <span className="font-normal" style={{ color: invoice.paymentStatus === 'Paid' ? undefined : '#fff' }}>{invoice.notes}</span></span>
                 )}
+                {/* Amount in Words moved to the right below Balance Due */}
+                <span className="text-xs font-semibold text-gray-900 ml-auto" style={{ minWidth: 220, textAlign: 'right' }}>
+                  <span style={{ color: invoice.paymentStatus === 'Paid' ? '#222' : '#fff' }}>Amount in Words: <span className="font-bold" style={{ color: invoice.paymentStatus === 'Paid' ? '#222' : '#fff' }}>{invoice.amountInWords}</span></span>
+                </span>
               </div>
             </Card>
           ))}
@@ -567,58 +585,6 @@ const InvoiceList = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Total Invoice Values by Month Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Invoice Values by Month</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 mb-4">
-            <label htmlFor="year-select" className="font-medium">Select Year:</label>
-            <select
-              id="year-select"
-              className="border rounded px-2 py-1"
-              value={selectedYear}
-              onChange={e => setSelectedYear(e.target.value)}
-            >
-              {years.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ width: "50%", height: 200, minWidth: 300 }} className="mx-auto">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={monthlySales} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <XAxis dataKey="month" tickFormatter={m => {
-                  const monthNum = parseInt(m);
-                  let year = selectedYear;
-                  if (monthNum <= 3) year = (parseInt(selectedYear) + 1).toString();
-                  return new Date(`${year}-${m}-01`).toLocaleString('default', { month: 'short' });
-                }} />
-                <YAxis tickFormatter={v => {
-                  if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Cr';
-                  if (v >= 100000) return (v / 100000).toFixed(1) + 'L';
-                  if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
-                  return `₹${v}`;
-                }} />
-                <Tooltip formatter={v => {
-                  if (typeof v !== 'number') return v;
-                  if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`;
-                  if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`;
-                  if (v >= 1000) return `₹${(v / 1000).toFixed(1)} K`;
-                  return `₹${v}`;
-                }} labelFormatter={m => {
-                  const monthNum = parseInt(m);
-                  let year = selectedYear;
-                  if (monthNum <= 3) year = (parseInt(selectedYear) + 1).toString();
-                  return new Date(`${year}-${m}-01`).toLocaleString('default', { month: 'long', year: 'numeric' });
-                }} />
-                <Line type="monotone" dataKey="total" stroke="#2563eb" name="Total Invoice Value" strokeWidth={3} dot={{ r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

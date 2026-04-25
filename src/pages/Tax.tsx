@@ -66,7 +66,7 @@ export default function TaxSummary() {
         };
       }
       acc[key].cgst += inv.cgst || 0;
-      acc[key].sgst += inv.sgst || 0;
+  acc[key].sgst += inv.sgst || 0;
       acc[key].igst += inv.igst || 0;
     }
     // Veshad GST
@@ -102,10 +102,15 @@ export default function TaxSummary() {
     return Array.from(set).sort((a, b) => b.localeCompare(a)); // Descending
   }, [vendorsInvoices, invoices]);
 
-  // Set default year to latest
+  // Set default year to present year
   useEffect(() => {
     if (years.length && !selectedYear) {
-      setSelectedYear(years[0]);
+      const currentYear = new Date().getFullYear().toString();
+      if (years.includes(currentYear)) {
+        setSelectedYear(currentYear);
+      } else {
+        setSelectedYear(years[0]);
+      }
     }
   }, [years, selectedYear]);
 
@@ -115,6 +120,22 @@ export default function TaxSummary() {
       return taxByMonth[key].year.toString() === selectedYear;
     })
     .sort((a, b) => a.localeCompare(b));
+
+  // Calculate totals for displayed rows
+  const totals = useMemo(() => {
+    let cgst = 0, sgst = 0, igst = 0, veshadCgst = 0, veshadSgst = 0, veshadIgst = 0, netGst = 0;
+    sortedKeys.forEach((key) => {
+      const row = taxByMonth[key];
+      cgst += row.cgst || 0;
+      sgst += row.sgst || 0;
+      igst += row.igst || 0;
+      veshadCgst += row.veshadCgst || 0;
+      veshadSgst += row.veshadSgst || 0;
+      veshadIgst += row.veshadIgst || 0;
+      netGst += (row.veshadCgst || 0) + (row.veshadSgst || 0) + (row.veshadIgst || 0) - ((row.cgst || 0) + (row.sgst || 0) + (row.igst || 0));
+    });
+    return { cgst, sgst, igst, veshadCgst, veshadSgst, veshadIgst, netGst };
+  }, [sortedKeys, taxByMonth]);
 
   return (
     <div className="p-6 space-y-6">
@@ -144,17 +165,21 @@ export default function TaxSummary() {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full border text-sm">
+        <table className="min-w-full border text-base">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Month</th>
-              <th className="border px-4 py-2">CGST Collected</th>
-              <th className="border px-4 py-2">SGST Collected</th>
-              <th className="border px-4 py-2">IGST Collected</th>
-              <th className="border px-4 py-2">Veshad CGST</th>
-              <th className="border px-4 py-2">Veshad SGST</th>
-              <th className="border px-4 py-2">Veshad IGST</th>
-              <th className="border px-4 py-2">Recedual</th>
+            <tr className="bg-[#4472C4]">
+              <th className="border px-4 py-2 text-white text-2xl" rowSpan={2}>Month</th>
+              <th className="border px-4 py-2 text-white text-2xl" colSpan={3}>Input Tax</th>
+              <th className="border px-4 py-2 text-white text-2xl" colSpan={3}>Output Tax</th>
+              <th className="border px-4 py-2 text-white text-2xl" rowSpan={2}>Net GST</th>
+            </tr>
+            <tr className="bg-[#4472C4]">
+              <th className="border px-4 py-2 text-white text-2xl">CGST Collected</th>
+              <th className="border px-4 py-2 text-white text-2xl">SGST Collected</th>
+              <th className="border px-4 py-2 text-white text-2xl">IGST Collected</th>
+              <th className="border px-4 py-2 text-white text-2xl">Veshad CGST</th>
+              <th className="border px-4 py-2 text-white text-2xl">Veshad SGST</th>
+              <th className="border px-4 py-2 text-white text-2xl">Veshad IGST</th>
             </tr>
           </thead>
           <tbody>
@@ -164,35 +189,47 @@ export default function TaxSummary() {
               const totalVeshadGST = (veshadCgst || 0) + (veshadSgst || 0) + (veshadIgst || 0);
               const recedual =  totalVeshadGST - totalGST;
               return (
-                <tr key={key}>
-                  <td className="border px-4 py-2 font-medium">
+                <tr key={key} className="text-base text-center">
+                  <td className="border px-4 py-2 font-medium text-base text-center">
                     {monthNames[month]} {year}
                   </td>
-                  <td className="border px-4 py-2 text-green-800">
+                  <td className="border px-4 py-2 text-green-800 text-base text-center">
                     ₹{cgst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-green-800">
+                  <td className="border px-4 py-2 text-green-800 text-base text-center">
                     ₹{sgst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-green-800">
+                  <td className="border px-4 py-2 text-green-800 text-base text-center">
                     ₹{igst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-blue-800">
+                  <td className="border px-4 py-2 text-blue-800 text-base text-center">
                     ₹{veshadCgst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-blue-800">
+                  <td className="border px-4 py-2 text-blue-800 text-base text-center">
                     ₹{veshadSgst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-blue-800">
+                  <td className="border px-4 py-2 text-blue-800 text-base text-center">
                     ₹{veshadIgst.toLocaleString("en-IN")}
                   </td>
-                  <td className="border px-4 py-2 text-red-800 font-bold">
+                  <td className="border px-4 py-2 text-red-800 font-bold text-base text-center">
                     ₹{recedual.toLocaleString("en-IN")}
                   </td>
                 </tr>
               );
             })}
           </tbody>
+          <tfoot>
+            <tr className="bg-gray-100 font-bold text-center">
+              <td className="border px-4 py-2 text-center">Total</td>
+              <td className="border px-4 py-2 text-green-800 text-center">₹{totals.cgst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-green-800 text-center">₹{totals.sgst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-green-800 text-center">₹{totals.igst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-blue-800 text-center">₹{totals.veshadCgst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-blue-800 text-center">₹{totals.veshadSgst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-blue-800 text-center">₹{totals.veshadIgst.toLocaleString("en-IN")}</td>
+              <td className="border px-4 py-2 text-red-800 text-center">₹{totals.netGst.toLocaleString("en-IN")}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

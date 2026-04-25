@@ -1,5 +1,3 @@
-// Define purchaseUpload for file import
-const purchaseUpload = multer({ dest: "uploads/" });
 import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
@@ -9,6 +7,11 @@ import path from 'path';
 import fs from 'fs';
 import multer from "multer";
 import xlsx from "xlsx";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import dotenv from "dotenv";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +20,23 @@ const PORT = process.env.PORT || 4000;
 // Initialize Express app
 const app = express();
 
-// Configure middleware
+// Performa Invoice API endpoint (basic, similar to preview invoice)
+app.get("/api/performa-invoice/:invoiceNumber", (req, res) => {
+  const invoiceNumber = req.params.invoiceNumber;
+  db.get("SELECT * FROM invoices WHERE invoiceNumber = ?", [invoiceNumber], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else if (!row) {
+      res.status(404).json({ error: "Performa Invoice not found" });
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+// Define purchaseUpload for file import
+const purchaseUpload = multer({ dest: "uploads/" });
+
 app.use(cors({
   origin: ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -26,6 +45,66 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' })); // Increased limit for larger payloads
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// OAuth session setup
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your-session-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set to true if using HTTPS
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serialize user to session
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
+
+// Configure Google OAuth strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,      // from Google Cloud Console
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  // You can save user info to DB here if needed
+  return done(null, profile);
+}));
+
+// Start Google OAuth login
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Google OAuth callback
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    // Successful login, redirect to frontend
+    res.redirect('/'); // or your dashboard route
+  }
+);
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/login');
+  });
+});
+
+app.get("/api/secure-data", ensureAuthenticated, (req, res) => {
+  res.json({ secret: "This is protected data!" });
+});
+
+// Middleware to protect routes
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) { return next(); }
+  res.status(401).json({ error: "Unauthorized" });
+}
 
 // Database initialization
 const dbPath = path.resolve(__dirname, "invoices.db");
@@ -43,6 +122,93 @@ const db = new sqlite3.Database(dbPath,
 
 // Configure database settings
 db.serialize(() => {
+  // Performa Invoices table
+  db.run(`CREATE TABLE IF NOT EXISTS performa_invoices (
+    performaInvoiceNumber TEXT PRIMARY KEY,
+    date TEXT DEFAULT (datetime('now')),
+    revision INTEGER DEFAULT 1,
+    deliveryAddress_name TEXT,
+    deliveryAddress_address TEXT,
+    deliveryAddress_city TEXT,
+    deliveryAddress_postalCode TEXT,
+    deliveryAddress_state TEXT,
+    deliveryDate TEXT,
+    deliveryChallanRef TEXT,
+    hsnSac TEXT,
+    poRefNo TEXT,
+    ewayBillRef TEXT DEFAULT '',
+    invoiceTotal REAL,
+    totalNet REAL DEFAULT 0,
+    veshadCgst REAL DEFAULT 0,
+    veshadSgst REAL DEFAULT 0,
+    veshadIgst REAL DEFAULT 0,
+    grandTotal REAL DEFAULT 0,
+    amountInWords TEXT DEFAULT "",
+    notes TEXT DEFAULT "",
+    vendor_id INTEGER,
+    profitPercent REAL DEFAULT 0
+  )`);
+// Performa Invoice CRUD API
+app.get("/api/performa-invoices", (req, res) => {
+  db.all("SELECT * FROM performa_invoices ORDER BY date DESC", [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+app.get("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  db.get("SELECT * FROM performa_invoices WHERE performaInvoiceNumber = ?", [performaInvoiceNumber], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else if (!row) {
+      res.status(404).json({ error: "Performa Invoice not found" });
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+app.post("/api/performa-invoices", (req, res) => {
+  const data = req.body;
+  const keys = Object.keys(data);
+  const values = keys.map(k => data[k]);
+  db.run(`INSERT INTO performa_invoices (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`, values, function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true, id: data.performaInvoiceNumber });
+    }
+  });
+});
+
+app.put("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  const data = req.body;
+  const keys = Object.keys(data);
+  const values = keys.map(k => data[k]);
+  db.run(`UPDATE performa_invoices SET ${keys.map(k => `${k} = ?`).join(",")} WHERE performaInvoiceNumber = ?`, [...values, performaInvoiceNumber], function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
+app.delete("/api/performa-invoices/:performaInvoiceNumber", (req, res) => {
+  const performaInvoiceNumber = req.params.performaInvoiceNumber;
+  db.run("DELETE FROM performa_invoices WHERE performaInvoiceNumber = ?", [performaInvoiceNumber], function(err) {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
   db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA busy_timeout = 60000');
   db.run('PRAGMA synchronous = NORMAL');
@@ -389,12 +555,19 @@ app.get("/api/gst-collected", (req, res) => {
 });
 
 app.get("/api/gst-collected-fy", (req, res) => {
-  const now = new Date();
-  let fyStartYear = now.getFullYear();
-  let fyEndYear = now.getFullYear() + 1;
-  if (now.getMonth() + 1 < 4) {
-    fyStartYear = now.getFullYear() - 1;
-    fyEndYear = now.getFullYear();
+  const { fy } = req.query;
+  let fyStartYear, fyEndYear;
+  
+  if (fy && fy.includes('-')) {
+    [fyStartYear, fyEndYear] = fy.split('-').map(Number);
+  } else {
+    const now = new Date();
+    fyStartYear = now.getFullYear();
+    fyEndYear = now.getFullYear() + 1;
+    if (now.getMonth() + 1 < 4) {
+      fyStartYear = now.getFullYear() - 1;
+      fyEndYear = now.getFullYear();
+    }
   }
   const fyStart = `${fyStartYear}-04-01`;
   const fyEnd = `${fyEndYear}-03-31`;
@@ -454,12 +627,19 @@ app.get("/api/vendor/gst-collected", (req, res) => {
 });
 
 app.get("/api/vendor/gst-collected-fy", (req, res) => {
-  const now = new Date();
-  let fyStartYear = now.getFullYear();
-  let fyEndYear = now.getFullYear() + 1;
-  if (now.getMonth() + 1 < 4) {
-    fyStartYear = now.getFullYear() - 1;
-    fyEndYear = now.getFullYear();
+  const { fy } = req.query;
+  let fyStartYear, fyEndYear;
+  
+  if (fy && fy.includes('-')) {
+    [fyStartYear, fyEndYear] = fy.split('-').map(Number);
+  } else {
+    const now = new Date();
+    fyStartYear = now.getFullYear();
+    fyEndYear = now.getFullYear() + 1;
+    if (now.getMonth() + 1 < 4) {
+      fyStartYear = now.getFullYear() - 1;
+      fyEndYear = now.getFullYear();
+    }
   }
   const fyStart = `${fyStartYear}-04-01`;
   const fyEnd = `${fyEndYear}-03-31`;
@@ -742,7 +922,164 @@ app.delete("/api/delivery-challans/:challanNo", (req, res) => {
         message: 'Delivery challan and its items deleted successfully',
         challanNo
       });
+});
     });
+});
+
+// Get next delivery challan number with FY (DC-0001/26-27 format)
+app.get("/api/delivery-challans/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT challanNo FROM delivery_challans WHERE challanNo LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`DC-/%/${fyString}`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1;
+      if (row && row.challanNo) {
+        const match = row.challanNo.match(/DC-([0-9]{4})\/\d{2}-\d{2}/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const challanNo = `DC-${nextNumber.toString().padStart(4, '0')}/${fyString}`;
+      res.json({ challanNo });
+    }
+  );
+});
+
+// Create quotes table if not exists
+db.run(`CREATE TABLE IF NOT EXISTS quotes (
+  quotesNumber TEXT PRIMARY KEY,
+  date TEXT,
+  deliveryDate TEXT,
+  supplierName TEXT,
+  clientAddress_name TEXT,
+  clientAddress_address TEXT,
+  requestedBy TEXT,
+  grandTotal REAL,
+  notes TEXT,
+  items TEXT
+)`);
+
+// Get next quote number with FY (QTE/26-27/0001 format)
+app.get("/api/quotes/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT quotesNumber FROM quotes WHERE quotesNumber LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`QTE/${fyString}/%`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1001;
+      if (row && row.quotesNumber) {
+        const match = row.quotesNumber.match(/QTE\/\d{2}-\d{2}\/([0-9]{4})/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const quotesNumber = `QTE/${fyString}/${nextNumber.toString().padStart(4, '0')}`;
+      res.json({ quotesNumber });
+    }
+  );
+});
+
+// Get all quotes
+app.get("/api/quotes", (req, res) => {
+  db.all("SELECT * FROM quotes ORDER BY quotesNumber DESC", [], (err, rows) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Get a single quote
+app.get("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  db.get("SELECT * FROM quotes WHERE quotesNumber = ?", [quotesNumber], (err, row) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+    res.json(row);
+  });
+});
+
+// Create new quote
+app.post("/api/quotes", (req, res) => {
+  const { quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items } = req.body;
+  
+  if (!quotesNumber || !date) {
+    return res.status(400).json({ error: "Quote number and date are required" });
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO quotes (quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(quotesNumber, date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, JSON.stringify(items), (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, quotesNumber });
+  });
+});
+
+// Update quote
+app.put("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  const { date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, items } = req.body;
+  
+  const stmt = db.prepare(`
+    UPDATE quotes SET date=?, deliveryDate=?, supplierName=?, clientAddress_name=?, clientAddress_address=?, requestedBy=?, grandTotal=?, notes=?, items=?
+    WHERE quotesNumber = ?
+  `);
+  
+  stmt.run(date, deliveryDate, supplierName, clientAddress_name, clientAddress_address, requestedBy, grandTotal, notes, JSON.stringify(items), quotesNumber, (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Delete quote
+app.delete("/api/quotes/:quotesNumber", (req, res) => {
+  const quotesNumber = decodeURIComponent(req.params.quotesNumber);
+  db.run("DELETE FROM quotes WHERE quotesNumber = ?", [quotesNumber], (err) => {
+    if (err) {
+      console.error("DB ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true });
   });
 });
 
@@ -750,7 +1087,8 @@ app.delete("/api/delivery-challans/:challanNo", (req, res) => {
 // Helper Functions
 const validatePurchaseData = (data) => {
   const errors = [];
-  if (!data.slNo) errors.push('Serial number is required');
+  // Either slNo or purchaseNo is required
+  if (!data.slNo && !data.purchaseNo) errors.push('Serial number is required');
   if (!data.date) errors.push('Date is required');
   if (!data.description) errors.push('Description is required');
   
@@ -774,6 +1112,38 @@ app.get("/api/purchases/max-slno", (req, res) => {
     }
     res.json({ maxSlNo: row?.maxSlNo || 0 });
   });
+});
+
+// Get next purchase number with FY
+app.get("/api/purchases/next-number", (req, res) => {
+  const now = new Date();
+  let fyStart = now.getFullYear() % 100;
+  let fyEnd = (now.getFullYear() + 1) % 100;
+  if (now.getMonth() + 1 < 4) {
+    fyStart = (now.getFullYear() - 1) % 100;
+    fyEnd = now.getFullYear() % 100;
+  }
+  const fyString = `${fyStart.toString().padStart(2, '0')}-${fyEnd.toString().padStart(2, '0')}`;
+
+  db.get(
+    "SELECT purchaseNo FROM purchases WHERE purchaseNo LIKE ? ORDER BY ROWID DESC LIMIT 1",
+    [`PUR/${fyString}/%`],
+    (err, row) => {
+      if (err) {
+        console.error("DB ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      let nextNumber = 1001;
+      if (row && row.purchaseNo) {
+        const match = row.purchaseNo.match(/PUR\/\d{2}-\d{2}\/([0-9]{4})/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const purchaseNo = `PUR/${fyString}/${nextNumber.toString().padStart(4, '0')}`;
+      res.json({ purchaseNo });
+    }
+  );
 });
 
 
@@ -870,15 +1240,15 @@ app.post("/api/purchases", (req, res) => {
     return res.status(400).json({ 
       error: 'Validation failed', 
       details: validationErrors.join(', ') 
-    });pi
+    });
   }
 
   const query = `
     INSERT INTO purchases (
       slNo, date, description, credit, debit,
       bankPaymentRef, clientName, paymentRemarks,
-      refBankName, invoiceNo, inputCgst, inputSgst, inputIgst
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      refBankName, invoiceNo, inputCgst, inputSgst, inputIgst, purchaseNo
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.run(
@@ -896,7 +1266,8 @@ app.post("/api/purchases", (req, res) => {
       purchaseData.invoiceNo || '',
       purchaseData.inputCgst || 0,
       purchaseData.inputSgst || 0,
-      purchaseData.inputIgst || 0
+      purchaseData.inputIgst || 0,
+      purchaseData.slNo // use slNo as purchaseNo for new format
     ],
     function(err) {
       if (err) {

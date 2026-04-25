@@ -93,11 +93,11 @@ export default function VendorsNames() {
       ) : (
         <table className="min-w-full border border-black text-sm">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black px-2 py-1">Date</th>
-              <th className="border border-black px-2 py-1">Vendor Name</th>
-              <th className="border border-black px-2 py-1">Contact Details</th>
-              <th className="border border-black px-2 py-1">Actions</th>
+            <tr className="bg-[#4472C4]">
+              <th className="border border-black px-2 py-1 text-white">Date</th>
+              <th className="border border-black px-2 py-1 text-white">Vendor Name</th>
+              <th className="border border-black px-2 py-1 text-white">Contact Details</th>
+              <th className="border border-black px-2 py-1 text-white">Actions</th>
             </tr>
           </thead>
           <tbody>
